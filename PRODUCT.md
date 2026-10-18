@@ -16,7 +16,7 @@ Guests at a birthday who open a physical gacha capsule and find a QR code inside
 
 ## Product Purpose
 
-Juhulia is the moment between scanning the QR code and discovering the gift behind it. Each QR code opens its own capsule page: a single translucent gacha capsule (green, amber or pink, like the real ones) in a studio tinted to its colour, with glitter in the air. One tap bursts it open, an object that stands for the gift jumps out, and the gift's link appears beneath it. There is no automatic redirect.
+Juhulia is the moment between scanning the QR code and discovering the gift behind it. Each QR code opens its own capsule page: a single frosted gacha capsule (green, amber or pink, like the real ones; the gift only shows as a shadow) in a studio tinted to its colour, with glitter in the air. One tap bursts it open, an object that stands for the gift jumps out, and the gift's link appears beneath it. There is no automatic redirect.
 
 Success: the scan feels like opening something of value, and every page reliably shows its own link.
 

@@ -8,7 +8,7 @@ Drei Gacha-Kapseln mit QR-Code. Jeder Code führt zu einer eigenen Kapsel-Seite:
 | [/henne](https://juhulia.vercel.app/henne) | Rosa | rollt aus der Tiefe des Studios heran | Weinglas, schwenkt, der Wein schwappt nach | henne-weinbar.de |
 | [/phantasialand](https://juhulia.vercel.app/phantasialand) | Grün | wird im hohen Bogen hereinkatapultiert | Karussell, dreht sich, die Pferde wippen | phantasialand.de |
 
-Vor dem Tipp klopft es von innen, man sieht das Objekt durch das farbige Plastik, das Licht wandert, die Kapsel wirft farbiges Licht auf den Boden, Glitzer funkelt, und sie neigt sich zum Finger. Beim Öffnen: Zittern, Aufplatzen, Glitzer wirbelt heraus, der Deckel fliegt weg, das Objekt schießt mit Drall heraus, hängt kurz in Zeitlupe und schwebt dann vorn. Danach lässt es sich mit dem Finger drehen; Antippen lässt es springen und funkeln. Es werden keine Geräte-Rechte (Bewegungssensoren) abgefragt.
+Vor dem Tipp klopft es von innen, man ahnt das Objekt als Schatten hinter dem milchigen Plastik, ein Suchscheinwerfer streift umher, das Licht wandert, die Kapsel wirft farbiges Licht auf den Boden, Glitzer funkelt, und sie neigt sich zum Finger. Beim Öffnen: Zittern, Aufplatzen, Glitzer wirbelt heraus, der Deckel fliegt weg, das Objekt schießt mit Drall heraus, hängt kurz in Zeitlupe und schwebt dann vorn. Danach lässt es sich mit dem Finger drehen; Antippen lässt es springen und funkeln. Dreimal schnell antippen weckt ein Easter Egg: zense sprüht eine Duftwolke rundherum, der Wein von Henne. beginnt zu perlen, das Karussell dreht voll auf und schießt ein kleines Feuerwerk vom Dach. Es werden keine Geräte-Rechte (Bewegungssensoren) abgefragt.
 
 ## Aufbau
 

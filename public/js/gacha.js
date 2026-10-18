@@ -312,13 +312,35 @@ function makeFlacon() {
   root.add(g);
   let next = 1.2;
   const at = new THREE.Vector3();
+  const cloud = { left: 0, wait: 0, a: 0 };
   return {
     root,
     update(dt) {
       juice.update(dt);
     },
+    // easter egg: a whole cloud of scent, sprayed once around in a circle
+    egg(fx, ctx) {
+      cloud.left = 10;
+      cloud.wait = 0;
+      cloud.a = 0;
+      ctx.boost(1);
+    },
     // a press on the cap, then a puff of glitter
     life(t, dt, fx) {
+      if (cloud.left > 0) {
+        cloud.wait -= dt;
+        if (cloud.wait <= 0) {
+          cloud.left -= 1;
+          cloud.wait = 0.22;
+          cloud.a += Math.PI / 5;
+          gsap.fromTo(cap.position, { y: 0.86 }, { y: 0.92, duration: 0.2, ease: 'power3.out' });
+          juice.nudge(rand(-1, 1), rand(-1, 1));
+          nozzle.getWorldPosition(at);
+          const dir = new THREE.Vector3(Math.cos(cloud.a), 0.5, Math.sin(cloud.a));
+          fx.emit(at, 45, { dir, speed: 3, spread: 0.45, gravity: -0.1, drag: 1.6, swirl: 2, life: 2.6, size: 0.12 });
+        }
+        return;
+      }
       next -= dt;
       if (next > 0) return;
       next = rand(3.2, 5.2);
@@ -345,12 +367,42 @@ function makeWineGlass() {
   const wine = new Liquid(new THREE.LatheGeometry(wprof, 96), { color: 0x4a0410, top: 0x9a1424, fill: 0.02, center: new THREE.Vector3(0, 1.14, 0) });
   g.add(glass, wine.mesh);
   root.add(g);
+  // bubbles for the easter egg, rising through the wine
+  const BN = 70;
+  const bubbleGeo = new THREE.BufferGeometry();
+  bubbleGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BN * 3), 3));
+  const bubbles = new THREE.Points(bubbleGeo, new THREE.PointsMaterial({ color: 0xffe2e6, size: 0.035, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  bubbles.frustumCulled = false;
+  g.add(bubbles);
+  const bub = Array.from({ length: BN }, () => ({ y: rand(0.84, 1.12), a: rand(0, Math.PI * 2), r: rand(0, 1), v: rand(0.12, 0.3) }));
+  let fizz = 0;
   const swirl = { t: -1 };
   let next = 1.5;
   return {
     root,
     update(dt) {
       wine.update(dt);
+      if (fizz <= 0 && bubbles.material.opacity <= 0) return;
+      fizz = Math.max(0, fizz - dt);
+      bubbles.material.opacity = damp(bubbles.material.opacity, fizz > 0 ? 1 : 0, 3, dt);
+      const pos = bubbleGeo.attributes.position;
+      bub.forEach((b, i) => {
+        b.y += b.v * dt;
+        if (b.y > 1.14) b.y = 0.84;
+        // stay inside the bowl, which widens as it rises
+        const rad = (0.07 + (b.y - 0.83) * 0.95) * b.r;
+        pos.setXYZ(i, Math.cos(b.a + b.y * 6) * rad, b.y, Math.sin(b.a + b.y * 6) * rad);
+      });
+      pos.needsUpdate = true;
+      if (fizz > 0 && Math.random() < dt * 4) wine.nudge(rand(-0.15, 0.15), rand(-0.15, 0.15));
+    },
+    // easter egg: the red starts to sparkle
+    egg(fx, ctx) {
+      fizz = 7;
+      ctx.boost(0.8);
+      const at = new THREE.Vector3(0, 1.3, 0);
+      g.localToWorld(at);
+      fx.emit(at, 50, { dir: new THREE.Vector3(0, 1, 0), spread: 0.4, speed: 2.4, gravity: -0.05, drag: 1.8, life: 2.2, size: 0.08 });
     },
     // a slow swirl of the glass; the wine climbs the wall a beat behind
     life(t, dt) {
@@ -458,20 +510,49 @@ function makeCarousel(accent) {
     spin.add(post, horse);
     horses.push({ horse, phase: i * 1.05 });
   }
+  const rush = { v: 0, phase: 0 };
+  let fireworks = [];
   return {
     root,
     finalSize: 1.25,
     update(dt) {
       this.t = (this.t || 0) + dt;
       const t = this.t;
-      spin.rotation.y -= dt * 0.7;
+      const speed = 1 + rush.v * 4;
+      rush.phase += dt * speed;
+      spin.rotation.y -= dt * 0.7 * speed;
       horses.forEach(({ horse, phase }) => {
-        horse.position.y = 0.55 + Math.sin(t * 2.2 + phase) * 0.09;
-        horse.rotation.z = Math.sin(t * 2.2 + phase + 1.2) * 0.08;
+        horse.position.y = 0.55 + Math.sin(rush.phase * 2.2 + phase) * (0.09 + rush.v * 0.05);
+        horse.rotation.z = Math.sin(rush.phase * 2.2 + phase + 1.2) * 0.08;
       });
-      bulbs.forEach((b, i) => (b.material.emissiveIntensity = 0.5 + 0.8 * Math.max(0, Math.sin(t * 3 + i * 0.9))));
+      // the bulbs twinkle; at full speed they chase each other around the roof
+      bulbs.forEach((b, i) => {
+        const chase = Math.max(0, Math.sin(t * 14 - i * 0.8)) * 2.2;
+        b.material.emissiveIntensity = THREE.MathUtils.lerp(0.5 + 0.8 * Math.max(0, Math.sin(t * 3 + i * 0.9)), chase, rush.v);
+      });
     },
-    life() {},
+    // easter egg: the ride goes to full speed, then fireworks rise from the roof
+    egg(fx, ctx) {
+      gsap.killTweensOf(rush);
+      gsap.timeline().to(rush, { v: 1, duration: 0.8, ease: 'power2.in' }).to(rush, { v: 0, duration: 2.2, ease: 'power2.out' }, '+=2');
+      fireworks = [0.6, 1.4, 2.1, 2.9].map((at) => ({ at, done: false }));
+      this.eggT = 0;
+      ctx.boost(1);
+    },
+    life(t, dt, fx) {
+      if (!fireworks.length) return;
+      this.eggT += dt;
+      const top = new THREE.Vector3();
+      finial.getWorldPosition(top);
+      fireworks.forEach((f) => {
+        if (f.done || this.eggT < f.at) return;
+        f.done = true;
+        const burstAt = top.clone().add(new THREE.Vector3(rand(-0.6, 0.6), rand(1.2, 1.9), rand(-0.3, 0.3)));
+        fx.emit(top, 10, { dir: burstAt.clone().sub(top), spread: 0.1, speed: 5, gravity: 0.4, drag: 2, life: 0.5, size: 0.07 });
+        gsap.delayedCall(0.35, () => fx.emit(burstAt, 70, { speed: 3.4, gravity: 0.8, drag: 1.4, life: 1.6, size: 0.11 }));
+      });
+      if (fireworks.every((f) => f.done)) fireworks = [];
+    },
   };
 }
 
@@ -600,6 +681,40 @@ export function start(slug) {
   const flash = new THREE.PointLight(C.capsule, 0, 8, 2);
   flash.position.set(0, 0.4, 1);
   scene.add(key, key.target, rim, fill, flash);
+
+  // A searchlight from high on the left: it sweeps, and once the gift is out it keeps
+  // finding it. Its pool on the wall behind is what makes the glass light up.
+  const seeker = new THREE.SpotLight(0xfff4e2, 4.2, 40, 0.15, 0.45, 1.1);
+  seeker.position.set(-5.5, 8, 7);
+  scene.add(seeker, seeker.target);
+  const beamGeo = new THREE.CylinderGeometry(0.04, 1, 1, 48, 1, true);
+  beamGeo.translate(0, -0.5, 0);
+  beamGeo.rotateX(-Math.PI / 2); // apex at the origin, pointing along +z
+  const beamMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    uniforms: { uColor: { value: new THREE.Color(0xfff1d8) }, uOpacity: { value: 0.16 } },
+    vertexShader: `
+      varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main() {
+        vUv = uv; vN = normalize(normalMatrix * normal);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main() {
+        float edge = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
+        float along = 0.2 + 0.8 * vUv.y;
+        gl_FragColor = vec4(uColor * edge * along * uOpacity, 1.0);
+      }`,
+  });
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  scene.add(beam);
+  const seekAim = new THREE.Vector3();
+  const seekLock = { v: 0, hold: 0 };
 
   const pool = new THREE.Mesh(
     new THREE.PlaneGeometry(7, 7),
@@ -739,21 +854,21 @@ export function start(slug) {
       color: C.capsule,
       roughness,
       transmission,
-      thickness: 0.18,
+      thickness: 0.32,
       ior: 1.46,
       attenuationColor: C.capsule,
-      attenuationDistance: 1.8,
+      attenuationDistance: 1.3,
       clearcoat: 0.8,
       clearcoatRoughness: 0.12,
       emissive: C.capsule,
-      emissiveIntensity: 0.06,
+      emissiveIntensity: 0.1,
       envMapIntensity: 1.3,
       side: THREE.DoubleSide,
     });
-  const top = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 48, 0, Math.PI * 2, 0, Math.PI / 2), plastic(0.9, 0.06));
+  const top = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 48, 0, Math.PI * 2, 0, Math.PI / 2), plastic(0.78, 0.34));
   top.castShadow = true;
   lid.add(top);
-  const base = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 48, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), plastic(0.8, 0.1));
+  const base = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 48, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), plastic(0.62, 0.4));
   base.castShadow = true;
   body.add(base);
   // the rims where the halves meet, slightly proud of the surface
@@ -1034,6 +1149,7 @@ export function start(slug) {
   /* ---------- once revealed: drag to turn the gift, tap to make it spin and sparkle ---------- */
 
   const ray = new THREE.Raycaster();
+  let taps = [];
   const ndc = new THREE.Vector2();
   canvas.addEventListener('pointerdown', (e) => {
     if (state.mode !== 'revealed') return;
@@ -1057,6 +1173,14 @@ export function start(slug) {
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     if (!ray.intersectObject(gift.root, true).length) return;
+    // three quick taps on the gift wake its easter egg
+    const nowT = performance.now();
+    taps = taps.filter((x) => nowT - x < 1200);
+    taps.push(nowT);
+    if (taps.length >= 3 && gift.egg) {
+      taps = [];
+      gift.egg(fx, { boost: (v) => gsap.fromTo(glitterBoost, { v }, { v: 0, duration: 2.6, ease: 'power2.out' }) });
+    }
     drag.v += 0.5;
     giftPhys.vel.y += 3;
     const at = new THREE.Vector3();
@@ -1082,6 +1206,27 @@ export function start(slug) {
     t += realDt;
 
     // the key light wanders slowly; highlights travel over the plastic
+    // the searchlight: a restless sweep, locking on the gift now and then once it is out
+    {
+      const out = giftPhys.mode === 'home';
+      seekLock.hold -= realDt;
+      if (out && seekLock.hold <= 0) {
+        seekLock.hold = rand(4, 7);
+        gsap.to(seekLock, { v: 1, duration: 0.9, ease: 'power2.inOut', yoyo: true, repeat: 1, repeatDelay: rand(1.4, 2.4) });
+      }
+      const sx = Math.sin(t * 0.47) * 2.6 + Math.sin(t * 1.13) * 0.6;
+      const sy = 0.4 + Math.sin(t * 0.71) * 0.6;
+      seekAim.set(sx, sy, 0.3);
+      if (out) seekAim.lerp(gift.root.position, seekLock.v);
+      else seekAim.lerp(cap.position, 0.25);
+      seeker.target.position.lerp(seekAim, 1 - Math.exp(-4 * realDt));
+      const len = seeker.position.distanceTo(seeker.target.position) + 6;
+      const r = Math.tan(seeker.angle) * len;
+      beam.position.copy(seeker.position);
+      beam.lookAt(seeker.target.position);
+      beam.scale.set(r, r, len);
+      beamMat.uniforms.uOpacity.value = 0.12 + seekLock.v * 0.08;
+    }
     key.position.x = Math.sin(t * 0.22) * 3.2;
     key.position.z = 3 + Math.cos(t * 0.17) * 1.2;
     pool.position.x = key.position.x * 0.15;
