@@ -1,31 +1,35 @@
 # Juhulia
 
-Drei Gacha-Kapseln im Gruftie-Stil. Jeder QR-Code führt zu einer eigenen Kapsel-Seite: Die Kapsel erscheint in einer dunklen Krypta mit Kerzen, Bodennebel und gotischen Fenstern. Ein Tipp öffnet sie, danach geht es weiter zum Ziel.
+Drei Gacha-Kapseln mit QR-Code. Jeder Code führt zu einer eigenen Kapsel-Seite: eine Kapsel aus Rauchglas über Graphit in einem dunklen Fotostudio. Ein Tipp lässt sie aufplatzen, ein Objekt passend zum Geschenk springt heraus, und darunter erscheint der Link.
 
-| Seite | Auftritt | Öffnung | Ziel |
+| Seite | Auftritt | Objekt | Link |
 |---|---|---|---|
-| [/zense](https://juhulia.vercel.app/zense) | fällt von oben und hüpft aus | Deckel dreht sich ab, Weihrauch steigt auf | https://zenseofficial.de/ |
-| [/henne](https://juhulia.vercel.app/henne) | gleitet aus der Ferne durch den Nebel heran, Kerzen entzünden sich | Deckel klappt wie ein Reliquiar auf, Wein im Kerzenlicht | https://henne-weinbar.de/ |
-| [/phantasialand](https://juhulia.vercel.app/phantasialand) | Blitz, dann steigt sie aus einem Lichtring im Boden | schwebt in kreisenden Ringen, Fledermäuse fliehen | https://www.phantasialand.de/de/ |
+| [/zense](https://juhulia.vercel.app/zense) | fällt von oben, federt einmal schwer nach | Parfumflakon | zenseofficial.de |
+| [/henne](https://juhulia.vercel.app/henne) | rollt aus der Tiefe des Studios heran | Weinglas, der Wein schwappt | henne-weinbar.de |
+| [/phantasialand](https://juhulia.vercel.app/phantasialand) | wird im hohen Bogen hereinkatapultiert | goldenes Eintrittsticket | phantasialand.de |
 
-Solange niemand tippt, flackern die Kerzen, Asche treibt im Licht, Zugluft lässt die Flammen sich neigen, die Naht pulsiert wie ein Herzschlag. Bei Phantasialand blitzt es ab und zu und Fledermäuse ziehen vor dem Mond vorbei, bei zense steigt ein Faden Weihrauch auf.
+Vor dem Tipp klopft es von innen, man ahnt das Objekt hinter dem Rauchglas, das Licht wandert über die Kapsel, und sie neigt sich zum Finger bzw. zur Neigung des Handys. Beim Öffnen: Zittern, Aufplatzen, der Deckel fliegt weg, das Objekt schießt mit Drall heraus, hängt kurz in Zeitlupe und schwebt dann vorn. Danach lässt es sich mit dem Finger drehen.
 
 ## Aufbau
 
-Reines HTML, CSS und JavaScript, kein Build-Schritt. Vercel liefert den Ordner `public/` aus (siehe `vercel.json`).
+Reines HTML, CSS und JavaScript, kein Build-Schritt. Vercel liefert `public/` aus (siehe `vercel.json`).
 
-- `public/index.html`: alle drei QR-Codes mit Links
+- `public/index.html`: die drei QR-Codes mit Links
 - `public/<slug>.html`: die Kapsel-Seiten
-- `public/js/gacha.js`: die 3D-Szene (Three.js) und die Choreografie (GSAP)
-- `public/js/gachas.js`: Ziele, Farben, Auftritt und Öffnung je Kapsel
+- `public/js/gacha.js`: Studio, Kapsel, Objekte und Choreografie (Three.js + GSAP)
+- `public/js/gachas.js`: Link, Auftritt und Objekt je Kapsel
 - `public/qr/<slug>.svg`: druckfertige QR-Codes für `https://juhulia.vercel.app/<slug>`
-- `public/vendor/`: Three.js 0.160.1 und GSAP 3.12.5, lokal mitgeliefert
+- `public/vendor/`: Three.js 0.160.1 und GSAP 3.12.5; `public/fonts/`: Hanken Grotesk
+
+Falls die Szene nicht startet (kein WebGL, Skript lädt nicht), zeigt die Seite nach spätestens 8 Sekunden direkt den Link.
 
 ## Befehle
 
 ```bash
-npm install     # nur für die Werkzeuge unten
-npm run qr      # QR-Codes neu erzeugen (nach Änderungen an SITE oder den Slugs)
+npm install     # nur für die Werkzeuge
+npm run qr      # QR-Codes neu erzeugen
 npm run vendor  # Three.js und GSAP nach public/vendor kopieren
 npm run serve   # lokal ansehen auf http://localhost:3123
 ```
+
+Mit `?debug` an der URL ist der Szenen-Zustand als `window.__juhulia` erreichbar (für automatische Tests).

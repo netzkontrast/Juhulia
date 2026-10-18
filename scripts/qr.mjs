@@ -9,7 +9,7 @@ for (const slug of Object.keys(GACHAS)) {
     type: 'svg',
     errorCorrectionLevel: 'M',
     margin: 4,
-    color: { dark: '#0b0908', light: '#e8dcc8' },
+    color: { dark: '#111214', light: '#e9e7e3' },
   });
   await writeFile(new URL(`../public/qr/${slug}.svg`, import.meta.url), svg);
   console.log(`${SITE}/${slug} -> public/qr/${slug}.svg`);
