@@ -13,7 +13,7 @@ Constraints: static HTML on Vercel, Three.js + GSAP, neutral dark world pinned b
 ## Direction contract
 
 THESIS: The capsule is a product shot that comes alive: a smoked-glass object in a graphite studio that hides a gift you can almost see, until it bursts and the gift jumps out. It refuses both toy-gacha colour and themed props.
-OWN-WORLD: Graphite cyclorama (#101113 to #1c1d20), one wandering softbox, real shadows and reflections. Capsule: smoked glass over graphite, fine steel seam. Hanken Grotesk throughout; one bone-white pill button (#e9e7e3 on #111214 ink).
+OWN-WORLD: A studio cyclorama tinted to the capsule hue (deep ground, darker than the capsule), one wandering softbox, real shadows, twinkling glitter. Capsule: translucent coloured plastic like the real ones (amber, pink, green) with hinge tabs and air holes; it throws coloured light on the floor. Hanken Grotesk throughout; one bone-white pill button (#e9e7e3 on #111214 ink).
 STORY: It arrives, it knocks, the guest touches it, it bursts, the gift flies out and hangs in slow motion, settles in front, and its link appears.
 FIRST VIEWPORT: Capsule resting slightly above centre on the studio floor, soft contact shadow, the gift's silhouette behind the glass; hint "Tippen zum Öffnen" small near the bottom. After the reveal: gift floating above the open base, the lid lying beside it, domain pill near the bottom.
 FORM: brief-pinned studio product shot, position 1 of 1; the user-pinned brief beats the roll. seed:699f2679e8368c98

@@ -1,14 +1,14 @@
 # Juhulia
 
-Drei Gacha-Kapseln mit QR-Code. Jeder Code führt zu einer eigenen Kapsel-Seite: eine Kapsel aus Rauchglas über Graphit in einem dunklen Fotostudio. Ein Tipp lässt sie aufplatzen, ein Objekt passend zum Geschenk springt heraus, und darunter erscheint der Link.
+Drei Gacha-Kapseln mit QR-Code. Jeder Code führt zu einer eigenen Kapsel-Seite: eine durchscheinende Kapsel in ihrer Farbe (Bernstein, Rosa, Grün), in einem Studio, das dunkel in derselben Farbe getönt ist, mit Glitzer in der Luft. Ein Tipp lässt sie aufplatzen, ein Objekt passend zum Geschenk springt heraus, und darunter erscheint „Hier geht’s hin“.
 
-| Seite | Auftritt | Objekt | Link |
-|---|---|---|---|
-| [/zense](https://juhulia.vercel.app/zense) | fällt von oben, federt einmal schwer nach | Parfumflakon | zenseofficial.de |
-| [/henne](https://juhulia.vercel.app/henne) | rollt aus der Tiefe des Studios heran | Weinglas, der Wein schwappt | henne-weinbar.de |
-| [/phantasialand](https://juhulia.vercel.app/phantasialand) | wird im hohen Bogen hereinkatapultiert | goldenes Eintrittsticket | phantasialand.de |
+| Seite | Farbe | Auftritt | Objekt | Link |
+|---|---|---|---|---|
+| [/zense](https://juhulia.vercel.app/zense) | Bernstein | fällt von oben, federt einmal schwer nach | Parfumflakon, der Duft schwappt, sprüht ab und zu Glitzer | zenseofficial.de |
+| [/henne](https://juhulia.vercel.app/henne) | Rosa | rollt aus der Tiefe des Studios heran | Weinglas, schwenkt, der Wein schwappt nach | henne-weinbar.de |
+| [/phantasialand](https://juhulia.vercel.app/phantasialand) | Grün | wird im hohen Bogen hereinkatapultiert | Karussell, dreht sich, die Pferde wippen | phantasialand.de |
 
-Vor dem Tipp klopft es von innen, man ahnt das Objekt hinter dem Rauchglas, das Licht wandert über die Kapsel, und sie neigt sich zum Finger bzw. zur Neigung des Handys. Beim Öffnen: Zittern, Aufplatzen, der Deckel fliegt weg, das Objekt schießt mit Drall heraus, hängt kurz in Zeitlupe und schwebt dann vorn. Danach lässt es sich mit dem Finger drehen.
+Vor dem Tipp klopft es von innen, man ahnt das Objekt als Schatten hinter dem milchigen Plastik, ein Suchscheinwerfer streift umher, das Licht wandert, die Kapsel wirft farbiges Licht auf den Boden, Glitzer funkelt, und sie neigt sich zum Finger. Beim Öffnen: Zittern, Aufplatzen, Glitzer wirbelt heraus, der Deckel fliegt weg, das Objekt schießt mit Drall heraus, hängt kurz in Zeitlupe und schwebt dann vorn. Danach lässt es sich mit dem Finger drehen; Antippen lässt es springen und funkeln. Dreimal schnell antippen weckt ein Easter Egg: zense sprüht eine Duftwolke rundherum, der Wein von Henne. beginnt zu perlen, das Karussell dreht voll auf und schießt ein kleines Feuerwerk vom Dach. Es werden keine Geräte-Rechte (Bewegungssensoren) abgefragt.
 
 ## Aufbau
 
@@ -17,11 +17,11 @@ Reines HTML, CSS und JavaScript, kein Build-Schritt. Vercel liefert `public/` au
 - `public/index.html`: die drei QR-Codes mit Links
 - `public/<slug>.html`: die Kapsel-Seiten
 - `public/js/gacha.js`: Studio, Kapsel, Objekte und Choreografie (Three.js + GSAP)
-- `public/js/gachas.js`: Link, Auftritt und Objekt je Kapsel
+- `public/js/gachas.js`: Link, Auftritt, Objekt und Farben je Kapsel
 - `public/qr/<slug>.svg`: druckfertige QR-Codes für `https://juhulia.vercel.app/<slug>`
 - `public/vendor/`: Three.js 0.160.1 und GSAP 3.12.5; `public/fonts/`: Hanken Grotesk
 
-Falls die Szene nicht startet (kein WebGL, Skript lädt nicht), zeigt die Seite nach spätestens 8 Sekunden direkt den Link.
+Beim Laden zeigt ein Ring den echten Fortschritt (Download aller Dateien, dann Shader kompilieren, Schrift, zwei Aufwärm-Bilder). Erst wenn alles bereit ist, blendet er aus und die Kapsel tritt auf. Falls die Szene nicht startet (kein WebGL, Skript lädt nicht), zeigt die Seite nach spätestens 15 Sekunden direkt den Link.
 
 ## Befehle
 
