@@ -92,7 +92,7 @@ a { color: inherit; }
 }
 .loader__star {
   position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--page-glitter, #fff);
-  box-shadow: 0 0 6px 1px var(--page-glitter, #fff); opacity: 0;
+  opacity: 0;
   animation: twinkle var(--d, 3s) ease-in-out var(--delay, 0s) infinite;
 }
 @keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(0.6); } 50% { opacity: var(--o, 0.9); transform: scale(1); } }
