@@ -52,4 +52,5 @@ Destination URLs above. No photos or brand assets of the destinations are used; 
 
 1. The capsule is the whole interface; nothing competes with it.
 2. Weight over whimsy: entrances may move with physical weight (a drop, an approach, a rise), the opening is slow, deliberate and lit.
-3. The link must always be reachable: if the scene cannot start, the page shows the link anyway.
+3. The link must always be reachable: without JavaScript, or when the scene cannot start or breaks (missing file, no WebGL, render error, lost GPU context, stalled loading), the page shows its link.
+4. Reduced motion gets a still capsule and a quiet reveal without flight, shake or fireworks; the reveal names the gift for screen readers and hands focus to the link.

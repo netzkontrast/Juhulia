@@ -57,6 +57,24 @@ a { color: inherit; }
 }
 .stage__reveal[hidden] { display: none; }
 .stage__reveal.is-visible { opacity: 1; transform: none; }
+.stage:focus { outline: none; }
+/* the gift's name is read out with the link; it is only shown when there is no scene */
+.stage__name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+
+/* Without JavaScript (static) or when the scene cannot run (fallback): the link alone,
+   under the gift's name, on the page's own colour. Nothing covers it. */
+:root:is([data-state='static'], [data-state='fallback']) :is(.loader, .stage__open, .stage__hint, .stage canvas) { display: none; }
+:root:is([data-state='static'], [data-state='fallback']) .stage {
+  background: linear-gradient(180deg, var(--page-deep, var(--ground)) 0%, var(--page-deep, var(--ground)) 55%, var(--page-floor, var(--ground)) 100%);
+}
+:root:is([data-state='static'], [data-state='fallback']) .stage__reveal {
+  display: flex; inset: 0; bottom: auto; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  opacity: 1; transform: none; transition: none;
+}
+:root:is([data-state='static'], [data-state='fallback']) .stage__name {
+  position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; text-align: center;
+  font-size: clamp(2rem, 9vw, 3.5rem); font-weight: 300; letter-spacing: -0.035em; line-height: 1; color: var(--page-accent, var(--text));
+}
 
 .link {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;

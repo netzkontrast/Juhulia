@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-state="static">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,19 +9,26 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/hanken.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/site.css">
+<script>
+  // JavaScript runs: show the loading screen. If the boot module never arrives, keep the link.
+  document.documentElement.dataset.state = 'loading';
+  setTimeout(function () { if (!window.__juhuliaBoot) document.documentElement.dataset.state = 'fallback'; }, 15000);
+</script>
 <script type="importmap">{ "imports": { "three": "/vendor/three.module.min.js" } }</script>
 </head>
 <body style="--page-floor:#2a1d0e;--page-glitter:#ffd27a;--page-accent:#f2a516;--page-deep:#150e06;--page-muted:#c9ab7c;--page-btn:#f8e4bd;--page-ink:#1f1508">
-<main class="stage" data-stage>
+<main class="stage" data-stage data-slug="zense" tabindex="-1">
   <h1 class="visually-hidden">Kapsel</h1>
   <canvas aria-hidden="true"></canvas>
   <button type="button" class="stage__open" data-open aria-label="Kapsel öffnen"></button>
   <p class="stage__hint" data-hint>Tippen zum Öffnen</p>
-  <div class="stage__reveal" data-reveal role="status" hidden>
+  <div class="stage__reveal" data-reveal hidden>
+    <p class="stage__name">zense</p>
     <a class="link" href="https://zenseofficial.de/" aria-label="Hier geht’s hin: zenseofficial.de">Hier geht’s hin
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
   </div>
+  <p class="visually-hidden" role="status" data-announce></p>
   <div class="loader" data-loader role="progressbar" aria-label="Kapsel lädt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
     <div class="loader__floor" aria-hidden="true"></div>
     <div class="loader__center">
@@ -30,79 +37,6 @@
     </div>
   </div>
 </main>
-<script type="module">
-  // Fetch every file the scene needs with real byte progress, then start it.
-  const SLUG = 'zense';
-  const loader = document.querySelector('[data-loader]');
-  const bar = loader.querySelector('.loader__bar');
-  // glitter on the loading screen, like the studio's
-  const sky = document.createDocumentFragment();
-  for (let i = 0; i < 70; i++) {
-    const star = document.createElement('span');
-    star.className = 'loader__star';
-    star.setAttribute('aria-hidden', 'true');
-    const big = Math.random() < 0.15;
-    star.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 72}%;--d:${(2 + Math.random() * 3).toFixed(2)}s;--delay:${(-Math.random() * 4).toFixed(2)}s;--o:${(0.4 + Math.random() * 0.6).toFixed(2)};${big ? 'width:4px;height:4px;' : ''}`;
-    sky.appendChild(star);
-  }
-  loader.prepend(sky);
-  setTimeout(() => loader.querySelector('[data-loader-note]')?.classList.add('is-visible'), 3000);
-  window.__juhuliaProgress = (p) => {
-    const v = Math.round(Math.max(0, Math.min(1, p)) * 100);
-    bar.style.strokeDashoffset = 100 - v;
-    loader.setAttribute('aria-valuenow', v);
-  };
-  const files = [
-    ['/vendor/three.module.min.js', 670681],
-    ['/vendor/gsap.min.js', 72214],
-    ['/js/gacha.js', 60000],
-    ['/js/gachas.js', 2500],
-    ['/fonts/hanken.woff2', 34704],
-  ];
-  const got = files.map(() => 0);
-  const total = () => files.reduce((a, f) => a + f[1], 0);
-  const show = () => window.__juhuliaProgress(0.78 * Math.min(1, got.reduce((a, b) => a + b, 0) / total()));
-  const fetchOne = async ([url], i) => {
-    try {
-      const res = await fetch(url, { cache: 'force-cache' });
-      const len = Number(res.headers.get('content-length'));
-      if (len) files[i][1] = len;
-      if (!res.body || !res.body.getReader) {
-        await res.arrayBuffer();
-      } else {
-        const reader = res.body.getReader();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          got[i] += value.length;
-          show();
-        }
-      }
-    } catch {
-      /* the import below fetches it again if needed */
-    }
-    got[i] = files[i][1];
-    show();
-  };
-  await Promise.all(files.map(fetchOne));
-  await new Promise((resolve) => {
-    const s = document.createElement('script');
-    s.src = '/vendor/gsap.min.js';
-    s.onload = s.onerror = resolve;
-    document.head.appendChild(s);
-  });
-  const { start } = await import('/js/gacha.js');
-  start(SLUG);
-</script>
-<script>
-  // If the scene cannot start (slow network, blocked script), never leave a dead screen.
-  setTimeout(function () {
-    if (window.__juhuliaReady) return;
-    var l = document.querySelector('[data-loader]'); if (l) l.remove();
-    var b = document.querySelector('[data-open]'); if (b) b.remove();
-    var h = document.querySelector('[data-hint]'); if (h) h.remove();
-    var r = document.querySelector('[data-reveal]'); r.hidden = false; r.classList.add('is-visible');
-  }, 15000);
-</script>
+<script type="module" src="/js/boot.js" onerror="document.documentElement.dataset.state='fallback'"></script>
 </body>
 </html>
