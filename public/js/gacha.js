@@ -952,8 +952,9 @@ export async function start(slug) {
   const shake = new THREE.Vector3();
 
   // half the width the camera sees at the capsule's depth
-  const visibleHalfWidth = () => {
-    const d = Math.max(1, camera.position.z);
+  // half the visible width at depth z (the capsule stands at z = 0)
+  const visibleHalfWidth = (z = 0) => {
+    const d = Math.max(1, camera.position.z - z);
     return d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
   };
 
@@ -1222,7 +1223,7 @@ export async function start(slug) {
       lidPhys.rot.set(nearest(lidPhys.rot.x, Math.PI * 2), lidPhys.rot.y, nearest(lidPhys.rot.z, Math.PI * 2));
     } else {
       burst({ calm: true });
-      lidPhys.pos.set(clamp(visibleHalfWidth() - 1.05, 1.2, 1.7), FLOOR, -0.4);
+      lidPhys.pos.set(clamp(visibleHalfWidth(-1.9) - 1.05, 0.9, 1.7), FLOOR, -1.9);
       lidPhys.vel.set(0, 0, 0);
       lidPhys.rot.set(0, 0.6, 0);
       lidPhys.rest = true;
@@ -1290,6 +1291,16 @@ export async function start(slug) {
   let t = 0;
   const tmpV = new THREE.Vector3();
   const LID_GROUND = FLOOR + 0.5;
+
+  // the lid bounces off the edges of the view, measured at its own depth and with the
+  // camera where it ends up, so it also stays in frame once the camera moves in on the gift
+  const keepLidInView = () => {
+    const edge = Math.max(0.9, visibleHalfWidth(lidPhys.pos.z) * (framing > 0.5 ? 1 : 0.85) - 1.05);
+    if (Math.abs(lidPhys.pos.x) > edge) {
+      lidPhys.pos.x = Math.sign(lidPhys.pos.x) * edge;
+      lidPhys.vel.x *= -0.3;
+    }
+  };
 
   const tick = (now) => {
     if (stopped) return;
@@ -1399,11 +1410,7 @@ export async function start(slug) {
         if (!lidPhys.rest) {
           lidPhys.vel.y -= GRAVITY * dt;
           lidPhys.pos.addScaledVector(lidPhys.vel, dt);
-          const edge = Math.max(1.4, visibleHalfWidth() - 1.05);
-          if (Math.abs(lidPhys.pos.x) > edge) {
-            lidPhys.pos.x = Math.sign(lidPhys.pos.x) * edge;
-            lidPhys.vel.x *= -0.3;
-          }
+          keepLidInView();
           lidPhys.rot.x += lidPhys.spin.x * dt;
           lidPhys.rot.y += lidPhys.spin.y * dt;
           lidPhys.rot.z += lidPhys.spin.z * dt;
@@ -1423,6 +1430,7 @@ export async function start(slug) {
           lidPhys.pos.x += lidPhys.vel.x * dt;
           lidPhys.pos.z += lidPhys.vel.z * dt;
           lidPhys.vel.multiplyScalar(Math.exp(-4 * dt));
+          keepLidInView();
           lidPhys.pos.y = damp(lidPhys.pos.y, FLOOR, 6, dt);
           lidPhys.rot.x = damp(lidPhys.rot.x, nearest(lidPhys.rot.x, Math.PI * 2), 5, dt);
           lidPhys.rot.z = damp(lidPhys.rot.z, nearest(lidPhys.rot.z, Math.PI * 2), 5, dt);
