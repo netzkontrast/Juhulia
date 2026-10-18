@@ -32,7 +32,7 @@ The physical capsule is echoed by a digital one: the real object in the guest's 
 
 ## Capabilities and Constraints
 
-- One screen per capsule: the capsule enters, stays alive while it waits (knocks, wandering light, twinkling glitter, coloured light on the floor, leans toward the finger), a tap bursts it open, the gift object (flacon, wine glass, roller coaster) jumps out, settles and keeps living, and a button "Hier geht’s hin" appears.
+- One screen per capsule: the capsule enters, stays alive while it waits (knocks, wandering light, twinkling glitter, coloured light on the floor, leans toward the finger), a tap bursts it open, the gift object (flacon, wine glass, carousel) jumps out, settles and keeps living, and a button "Hier geht’s hin" appears.
 - No device permissions are requested (no motion or orientation sensors).
 - Pages and destinations: /zense → zenseofficial.de, /henne → henne-weinbar.de, /phantasialand → phantasialand.de. QR codes encode https://juhulia.vercel.app/<slug>.
 - Unknown paths show a short 404 page linking to the index.

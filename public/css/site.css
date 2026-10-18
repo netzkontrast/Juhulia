@@ -78,6 +78,21 @@ a { color: inherit; }
 .link:active { transform: scale(0.98); }
 .link svg { flex: none; }
 
+/* ---------- loading ---------- */
+
+.loader {
+  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center;
+  background: var(--page-deep, var(--ground));
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.loader.is-done { opacity: 0; pointer-events: none; }
+.loader svg { width: 44px; height: 44px; transform: rotate(-90deg); overflow: visible; }
+.loader__track { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 2.5; }
+.loader__bar {
+  fill: none; stroke: var(--page-accent, var(--text)); stroke-width: 2.5; stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* ---------- index ---------- */
 
 .index { min-height: 100vh; max-width: 1180px; margin: 0 auto; padding: clamp(48px, 9vw, 112px) clamp(16px, 5vw, 64px) 96px; }

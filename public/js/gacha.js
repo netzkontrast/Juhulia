@@ -160,18 +160,130 @@ function roundedRect(w, h, r) {
 
 const FONT = '"Hanken Grotesk", ui-sans-serif, system-ui, sans-serif';
 
-// zense: a perfume flacon with amber juice; now and then it sprays a glittering mist.
+/* ---------- liquid: a level surface that sloshes, drawn by clipping a volume ---------- */
+
+// The liquid is a closed volume clipped by a plane that stays level with the world
+// and wobbles on a spring when its container moves or turns. Faces seen from inside
+// the volume are drawn flat in the surface colour, so the cut reads as a surface.
+class Liquid {
+  constructor(geometry, { color, top, fill, center = new THREE.Vector3() }) {
+    this.localCenter = center;
+    this.fill = fill; // height of the surface above the centre, in local units
+    this.material = new THREE.ShaderMaterial({
+      side: THREE.DoubleSide,
+      uniforms: {
+        uColor: { value: new THREE.Color(color) },
+        uTop: { value: new THREE.Color(top) },
+        uCenter: { value: new THREE.Vector3() },
+        uUp: { value: new THREE.Vector3(0, 1, 0) },
+        uFill: { value: 0 },
+        uScale: { value: 1 },
+        uTime: { value: 0 },
+        uChurn: { value: 0 },
+      },
+      vertexShader: `
+        varying vec3 vWorld; varying vec3 vNormal;
+        void main() {
+          vec4 w = modelMatrix * vec4(position, 1.0);
+          vWorld = w.xyz;
+          vNormal = normalize(mat3(modelMatrix) * normal);
+          gl_Position = projectionMatrix * viewMatrix * w;
+        }`,
+      fragmentShader: `
+        uniform vec3 uColor; uniform vec3 uTop; uniform vec3 uCenter; uniform vec3 uUp;
+        uniform float uFill; uniform float uScale; uniform float uTime; uniform float uChurn;
+        varying vec3 vWorld; varying vec3 vNormal;
+        void main() {
+          vec3 p = (vWorld - uCenter) / uScale;
+          float ripple = (sin(p.x * 23.0 + uTime * 3.1) + sin(p.z * 19.0 - uTime * 2.7)) * (0.006 + 0.03 * uChurn);
+          float h = dot(p, uUp);
+          if (h > uFill + ripple) discard;
+          vec3 col;
+          if (!gl_FrontFacing) {
+            // the surface, seen through the cut
+            col = uTop * (0.85 + 0.15 * sin(p.x * 31.0 + p.z * 17.0 + uTime * 2.0));
+          } else {
+            vec3 N = normalize(vNormal);
+            vec3 V = normalize(cameraPosition - vWorld);
+            float diff = 0.55 + 0.45 * max(dot(N, normalize(vec3(0.3, 1.0, 0.6))), 0.0);
+            float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+            float meniscus = smoothstep(uFill - 0.05, uFill, h);
+            col = uColor * diff + uTop * (fres * 0.6 + meniscus * 0.35);
+          }
+          gl_FragColor = vec4(col, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    });
+    this.mesh = new THREE.Mesh(geometry, this.material);
+    this.wobble = { x: 0, z: 0, vx: 0, vz: 0 };
+    this.last = new THREE.Vector3();
+    this.lastVel = new THREE.Vector3();
+    this.lastUp = new THREE.Vector3(0, 1, 0);
+    this.first = true;
+    this.t = 0;
+    this._c = new THREE.Vector3();
+    this._v = new THREE.Vector3();
+    this._a = new THREE.Vector3();
+    this._up = new THREE.Vector3();
+    this._s = new THREE.Vector3();
+  }
+
+  // a push from outside, e.g. a deliberate swirl of the glass
+  nudge(x, z) {
+    this.wobble.vx += x;
+    this.wobble.vz += z;
+  }
+
+  update(dt) {
+    if (dt <= 0) return;
+    this.t += dt;
+    const m = this.mesh;
+    m.updateWorldMatrix(true, false);
+    const c = this._c.copy(this.localCenter).applyMatrix4(m.matrixWorld);
+    const scale = this._s.setFromMatrixScale(m.matrixWorld).x;
+    const up = this._up.set(0, 1, 0).transformDirection(m.matrixWorld);
+    if (this.first) {
+      this.last.copy(c);
+      this.lastUp.copy(up);
+      this.first = false;
+    }
+    // acceleration of the container and how fast it turns both push the liquid
+    const v = this._v.copy(c).sub(this.last).divideScalar(dt);
+    const a = this._a.copy(v).sub(this.lastVel).divideScalar(dt);
+    const turn = this.lastUp.clone().sub(up).divideScalar(dt);
+    this.last.copy(c);
+    this.lastVel.copy(v);
+    this.lastUp.copy(up);
+    const w = this.wobble;
+    const push = clamp(1 / Math.max(scale, 0.2), 0, 4);
+    w.vx += (-a.x * 0.012 * push + turn.x * 0.25 - w.x * 70) * dt;
+    w.vz += (-a.z * 0.012 * push + turn.z * 0.25 - w.z * 70) * dt;
+    w.vx *= Math.exp(-2.6 * dt);
+    w.vz *= Math.exp(-2.6 * dt);
+    w.x = clamp(w.x + w.vx * dt, -0.6, 0.6);
+    w.z = clamp(w.z + w.vz * dt, -0.6, 0.6);
+    const u = this.material.uniforms;
+    u.uCenter.value.copy(c);
+    u.uUp.value.set(w.x, 1, w.z).normalize();
+    u.uFill.value = this.fill;
+    u.uScale.value = scale;
+    u.uTime.value = this.t;
+    u.uChurn.value = clamp(Math.hypot(w.vx, w.vz) * 0.5);
+  }
+}
+
+// zense: a perfume flacon with sloshing amber juice; now and then it sprays a glittering mist.
 function makeFlacon() {
   const root = new THREE.Group();
   const g = new THREE.Group();
   const bodyGeo = new THREE.ExtrudeGeometry(roundedRect(0.95, 1.05, 0.12), { depth: 0.42, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 4, curveSegments: 16 });
   bodyGeo.center();
   const body = new THREE.Mesh(bodyGeo, glassMaterial({ thickness: 0.3, color: 0xf4f1ea, envMapIntensity: 2 }));
-  const juiceGeo = new THREE.ExtrudeGeometry(roundedRect(0.78, 0.7, 0.08), { depth: 0.28, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 });
+  const juiceGeo = new THREE.ExtrudeGeometry(roundedRect(0.8, 0.9, 0.09), { depth: 0.3, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 });
   juiceGeo.center();
-  // opaque: three.js does not render a transmissive object seen through another one
-  const juice = new THREE.Mesh(juiceGeo, new THREE.MeshPhysicalMaterial({ color: 0xc27a22, roughness: 0.18, clearcoat: 1, emissive: 0x3a1c04, envMapIntensity: 1.2 }));
-  juice.position.y = -0.12;
+  const juice = new Liquid(juiceGeo, { color: 0xb8691a, top: 0xf2b45a, fill: 0.12 });
+  juice.mesh.position.y = -0.04;
   const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.14, 48), new THREE.MeshStandardMaterial({ color: 0xcfc9bf, metalness: 1, roughness: 0.28 }));
   collar.position.y = 0.6;
   const cap = new THREE.Mesh(
@@ -196,21 +308,22 @@ function makeFlacon() {
   label.position.set(0, 0.18, 0.272);
   const nozzle = new THREE.Object3D();
   nozzle.position.set(0, 1.0, 0.25);
-  g.add(body, juice, collar, cap, label, nozzle);
-  g.position.y = -0.1;
+  g.add(body, juice.mesh, collar, cap, label, nozzle);
   root.add(g);
   let next = 1.2;
   const at = new THREE.Vector3();
   return {
     root,
-    height: 2.2,
-    update() {},
+    update(dt) {
+      juice.update(dt);
+    },
     // a press on the cap, then a puff of glitter
     life(t, dt, fx) {
       next -= dt;
       if (next > 0) return;
       next = rand(3.2, 5.2);
       gsap.fromTo(cap.position, { y: 0.86 }, { y: 0.92, duration: 0.5, ease: 'power3.out' });
+      juice.nudge(rand(-0.6, 0.6), rand(-0.6, 0.6));
       nozzle.getWorldPosition(at);
       const dir = new THREE.Vector3(0.2, 0.35, 1).applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()));
       fx.emit(at, 38, { dir, speed: 2.2, spread: 0.55, gravity: -0.15, drag: 2.2, life: 1.8, size: 0.09 });
@@ -218,7 +331,7 @@ function makeFlacon() {
   };
 }
 
-// Henne.: a stemmed glass of red wine; it swirls now and then and the wine sloshes.
+// Henne.: a stemmed glass of red wine; it swirls now and then and the wine follows.
 function makeWineGlass() {
   const root = new THREE.Group();
   const g = new THREE.Group();
@@ -227,41 +340,19 @@ function makeWineGlass() {
     [0.07, 0.8], [0.2, 0.86], [0.31, 0.96], [0.37, 1.12], [0.38, 1.3], [0.36, 1.48], [0.33, 1.62],
   ].map(([x, y]) => new THREE.Vector2(x, y));
   const glass = new THREE.Mesh(new THREE.LatheGeometry(prof, 96), glassMaterial({ side: THREE.DoubleSide, thickness: 0.08 }));
-  const wineMat = new THREE.MeshPhysicalMaterial({
-    color: 0x6a0812,
-    roughness: 0.06,
-    transmission: 0.35,
-    thickness: 0.6,
-    ior: 1.34,
-    clearcoat: 1,
-    envMapIntensity: 1.2,
-    side: THREE.DoubleSide,
-  });
-  const wprof = [[0.0, 0.83], [0.07, 0.83], [0.19, 0.88], [0.29, 0.97], [0.345, 1.1], [0.35, 1.16]].map(([x, y]) => new THREE.Vector2(x, y));
-  const bowl = new THREE.Mesh(new THREE.LatheGeometry(wprof, 96), wineMat);
-  const surface = new THREE.Mesh(new THREE.CircleGeometry(0.35, 64), wineMat);
-  surface.rotation.x = -Math.PI / 2;
-  surface.position.y = 1.16;
-  g.add(glass, bowl, surface);
-  g.position.y = -0.85;
+  // the wine's volume: the inside of the bowl, closed at the bottom
+  const wprof = [[0.0, 0.83], [0.07, 0.83], [0.19, 0.88], [0.29, 0.97], [0.355, 1.12], [0.365, 1.3], [0.35, 1.46], [0.0, 1.46]].map(([x, y]) => new THREE.Vector2(x, y));
+  const wine = new Liquid(new THREE.LatheGeometry(wprof, 96), { color: 0x4a0410, top: 0x9a1424, fill: 0.02, center: new THREE.Vector3(0, 1.14, 0) });
+  g.add(glass, wine.mesh);
   root.add(g);
-  const slosh = { x: 0, z: 0, vx: 0, vz: 0 };
   const swirl = { t: -1 };
   let next = 1.5;
   return {
     root,
-    height: 1.7,
-    // tilt the surface against the glass's own motion, on a damped spring
-    update(dt, accel) {
-      slosh.vx += (-accel.z * 0.04 - slosh.x * 60) * dt;
-      slosh.vz += (accel.x * 0.04 - slosh.z * 60) * dt;
-      slosh.vx *= Math.exp(-3 * dt);
-      slosh.vz *= Math.exp(-3 * dt);
-      slosh.x += slosh.vx * dt;
-      slosh.z += slosh.vz * dt;
-      surface.rotation.set(-Math.PI / 2 + clamp(slosh.x, -0.35, 0.35), 0, clamp(slosh.z, -0.35, 0.35));
+    update(dt) {
+      wine.update(dt);
     },
-    // a slow swirl of the glass, the wine following a beat behind
+    // a slow swirl of the glass; the wine climbs the wall a beat behind
     life(t, dt) {
       next -= dt;
       if (next <= 0 && swirl.t < 0) {
@@ -274,104 +365,117 @@ function makeWineGlass() {
         const a = swirl.t * 7;
         g.position.x = Math.cos(a) * 0.05 * k;
         g.position.z = Math.sin(a) * 0.05 * k;
-        slosh.vx += Math.sin(a) * 1.4 * k * dt * 10;
-        slosh.vz += Math.cos(a) * 1.4 * k * dt * 10;
-        if (swirl.t > 1.6) swirl.t = -1;
+        if (swirl.t > 1.6) {
+          swirl.t = -1;
+          g.position.set(0, 0, 0);
+        }
       }
     },
   };
 }
 
-// Phantasialand: a roller coaster loop; its car keeps riding it.
-function makeCoaster(accent) {
-  const root = new THREE.Group();
-  const pts = [
-    [-1.0, 0.05, 0.14], [-0.4, 0.05, 0.13], [0.25, 0.05, 0.12], [0.47, 0.11, 0.09], [0.65, 0.45, 0.05], [0.45, 0.8, 0.0],
-    [0.05, 0.8, -0.04], [-0.15, 0.45, -0.07], [0.05, 0.11, -0.1], [0.32, 0.05, -0.12], [0.8, 0.06, -0.16], [1.15, 0.08, -0.45],
-    [0.85, 0.1, -0.78], [0.0, 0.1, -0.8], [-0.85, 0.08, -0.65], [-1.25, 0.06, -0.3],
-  ].map(([x, y, z]) => new THREE.Vector3(x, y - 0.42, z + 0.33));
-  const curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
+// A carousel horse in profile, prancing, as a thick extruded silhouette.
+function horseShape() {
+  const s = new THREE.Shape();
+  const P = [
+    [-0.5, 0.1], [-0.6, -0.02], [-0.66, -0.16], [-0.56, -0.04], [-0.46, 0.06], [-0.3, 0.17], [0.12, 0.17], [0.24, 0.3], [0.3, 0.46],
+    [0.34, 0.6], [0.4, 0.5], [0.48, 0.5], [0.62, 0.38], [0.6, 0.31], [0.44, 0.33], [0.32, 0.2], [0.3, 0.02], [0.44, -0.08],
+    [0.48, -0.2], [0.42, -0.22], [0.36, -0.12], [0.22, -0.08], [0.17, -0.42], [0.11, -0.42], [0.1, -0.1], [-0.24, -0.1],
+    [-0.3, -0.42], [-0.36, -0.42], [-0.4, -0.06],
+  ];
+  s.moveTo(...P[0]);
+  for (let i = 1; i < P.length; i++) {
+    const [x0, y0] = P[i - 1];
+    const [x1, y1] = P[i];
+    s.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+  }
+  s.lineTo(...P[0]);
+  return s;
+}
 
-  // rotation-minimising frame: carry a lateral vector along the track
-  const N = 360;
-  const P = [];
-  const T = [];
-  const L = [];
-  const U = [];
-  let lat = new THREE.Vector3();
-  for (let i = 0; i < N; i++) {
-    const u = i / N;
-    const p = curve.getPointAt(u);
-    const tan = curve.getTangentAt(u).normalize();
-    if (i === 0) lat.crossVectors(tan, new THREE.Vector3(0, 1, 0)).normalize();
-    else lat.sub(tan.clone().multiplyScalar(lat.dot(tan))).normalize();
-    const up = new THREE.Vector3().crossVectors(lat, tan).normalize();
-    P.push(p);
-    T.push(tan);
-    L.push(lat.clone());
-    U.push(up);
+// Phantasialand: a carousel that turns, its horses rising and falling on their poles.
+function makeCarousel(accent) {
+  const root = new THREE.Group();
+  const spin = new THREE.Group();
+  root.add(spin);
+  const cream = new THREE.MeshPhysicalMaterial({ color: 0xf3eee2, roughness: 0.35, clearcoat: 0.8, envMapIntensity: 1.1 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xd9b46a, metalness: 1, roughness: 0.28, envMapIntensity: 1.5 });
+  const tint = new THREE.MeshPhysicalMaterial({ color: accent, roughness: 0.3, clearcoat: 0.8, envMapIntensity: 1.1 });
+
+  const platform = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.82, 0.1, 48), cream);
+  platform.position.y = 0.05;
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.83, 0.83, 0.05, 48), tint);
+  skirt.position.y = 0.025;
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.0, 24), gold);
+  pole.position.y = 0.6;
+  // the roof: a striped cone over a scalloped valance
+  const roofGeo = new THREE.ConeGeometry(0.92, 0.42, 16, 1).toNonIndexed();
+  const colors = [];
+  const ca = new THREE.Color(accent);
+  const cb = new THREE.Color(0xf3eee2);
+  const pos = roofGeo.attributes.position;
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3;
+    const z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3;
+    const k = Math.floor(((Math.atan2(z, x) + Math.PI) / (Math.PI * 2)) * 16) % 2;
+    const c = k ? ca : cb;
+    for (let j = 0; j < 3; j++) colors.push(c.r, c.g, c.b);
   }
-  const railMat = new THREE.MeshStandardMaterial({ color: 0xece8e0, metalness: 0.6, roughness: 0.3, envMapIntensity: 1.4 });
-  const tieMat = new THREE.MeshStandardMaterial({ color: 0x3c3a36, metalness: 0.2, roughness: 0.6 });
-  [-1, 1].forEach((side) => {
-    const rail = new THREE.CatmullRomCurve3(P.map((p, i) => p.clone().addScaledVector(L[i], side * 0.07)), true);
-    root.add(new THREE.Mesh(new THREE.TubeGeometry(rail, 480, 0.024, 10, true), railMat));
-  });
-  const tieGeo = new THREE.BoxGeometry(0.18, 0.02, 0.04);
-  const m = new THREE.Matrix4();
-  for (let i = 0; i < N; i += 6) {
-    const tie = new THREE.Mesh(tieGeo, tieMat);
-    m.makeBasis(L[i], U[i], T[i]);
-    tie.quaternion.setFromRotationMatrix(m);
-    tie.position.copy(P[i]).addScaledVector(U[i], -0.012);
-    root.add(tie);
+  roofGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  roofGeo.computeVertexNormals();
+  const roof = new THREE.Mesh(roofGeo, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.35, clearcoat: 0.8 }));
+  roof.position.y = 1.31;
+  const valance = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 0.12, 48, 1, true), tint);
+  valance.material.side = THREE.DoubleSide;
+  valance.position.y = 1.05;
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), gold);
+  finial.position.y = 1.56;
+  spin.add(platform, skirt, pole, roof, valance, finial);
+
+  // a ring of bulbs along the valance that twinkle
+  const bulbs = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffd88a, emissiveIntensity: 1 }));
+    bulb.position.set(Math.cos(a) * 0.93, 1.0, Math.sin(a) * 0.93);
+    spin.add(bulb);
+    bulbs.push(bulb);
   }
-  // posts from the lower parts of the track down to a common ground
-  const postGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 8);
-  const groundY = Math.min(...P.map((p) => p.y)) - 0.28;
-  for (let i = 0; i < N; i += 20) {
-    if (P[i].y - groundY > 0.75) continue; // leave the loop free-standing
-    const post = new THREE.Mesh(postGeo, railMat);
-    const h = P[i].y - groundY;
-    post.scale.y = h;
-    post.position.set(P[i].x, groundY + h / 2, P[i].z);
-    root.add(post);
+
+  // six horses on gold poles
+  const horseGeo = new THREE.ExtrudeGeometry(horseShape(), { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 3, curveSegments: 6 });
+  horseGeo.center();
+  const horses = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const r = 0.56;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.9, 8), gold);
+    post.position.set(Math.cos(a) * r, 0.55, Math.sin(a) * r);
+    const horse = new THREE.Mesh(horseGeo, i % 2 ? cream : tint);
+    horse.scale.setScalar(0.42);
+    horse.position.copy(post.position);
+    horse.rotation.y = -a; // facing the direction of travel
+    spin.add(post, horse);
+    horses.push({ horse, phase: i * 1.05 });
   }
-  // the car: a rounded body in the capsule's colour with a dark seat
-  const car = new THREE.Group();
-  const shell = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(roundedRect(0.19, 0.28, 0.05), { depth: 0.09, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 3 }),
-    new THREE.MeshPhysicalMaterial({ color: accent, roughness: 0.25, clearcoat: 1, envMapIntensity: 1.2 }),
-  );
-  shell.geometry.center();
-  shell.rotation.x = Math.PI / 2;
-  shell.position.y = 0.07;
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.11), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 }));
-  seat.position.set(0, 0.125, -0.03);
-  car.add(shell, seat);
-  root.add(car);
-  let u = 0;
-  const q = new THREE.Quaternion();
   return {
     root,
-    height: 2.6,
-    finalScale: 1.05,
-    // gravity on a track: slower at the top, faster at the bottom
+    finalSize: 1.25,
     update(dt) {
-      const i = Math.floor(u * N) % N;
-      const h = clamp((P[i].y + 0.42) / 0.8);
-      u = (u + dt * (0.16 - 0.09 * h)) % 1;
-      const j = Math.floor(u * N) % N;
-      car.position.copy(curve.getPointAt(u)).addScaledVector(U[j], 0.02);
-      m.makeBasis(L[j], U[j], T[j]);
-      q.setFromRotationMatrix(m);
-      car.quaternion.slerp(q, 1 - Math.exp(-20 * dt));
+      this.t = (this.t || 0) + dt;
+      const t = this.t;
+      spin.rotation.y -= dt * 0.7;
+      horses.forEach(({ horse, phase }) => {
+        horse.position.y = 0.55 + Math.sin(t * 2.2 + phase) * 0.09;
+        horse.rotation.z = Math.sin(t * 2.2 + phase + 1.2) * 0.08;
+      });
+      bulbs.forEach((b, i) => (b.material.emissiveIntensity = 0.5 + 0.8 * Math.max(0, Math.sin(t * 3 + i * 0.9))));
     },
     life() {},
   };
 }
 
-const GIFTS = { flacon: makeFlacon, wineglass: makeWineGlass, coaster: makeCoaster };
+const GIFTS = { flacon: makeFlacon, wineglass: makeWineGlass, carousel: makeCarousel };
 
 /* ---------- the page ---------- */
 
@@ -394,6 +498,18 @@ export function start(slug) {
     reveal.hidden = false;
     requestAnimationFrame(() => reveal.classList.add('is-visible'));
   };
+  const progress = (p) => window.__juhuliaProgress?.(p);
+  // the loading screen leaves only once everything below is ready
+  const hideLoader = () =>
+    new Promise((resolve) => {
+      const el = document.querySelector('[data-loader]');
+      if (!el) return resolve();
+      el.classList.add('is-done');
+      setTimeout(() => {
+        el.remove();
+        resolve();
+      }, reduce ? 0 : 480);
+    });
 
   let renderer;
   try {
@@ -402,8 +518,8 @@ export function start(slug) {
     // No WebGL: the link is all there is.
     button.remove();
     hint.remove();
-    showLink();
     window.__juhuliaReady = true;
+    hideLoader().then(showLink);
     return;
   }
   window.__juhuliaReady = true;
@@ -682,10 +798,16 @@ export function start(slug) {
 
   /* the gift, visible inside the coloured plastic */
   const gift = GIFTS[g.object](C.capsule);
-  const giftScaleInside = 1.15 / gift.height;
-  const giftScaleOut = gift.finalScale ?? 1;
+  // centre the gift on its own bounds and size it from them, so that inside the
+  // capsule it always fits (bounding sphere well within the shell's radius of 1)
+  const giftBox = new THREE.Box3().setFromObject(gift.root);
+  const giftCentre = giftBox.getCenter(new THREE.Vector3());
+  gift.root.children.forEach((c) => c.position.sub(giftCentre));
+  const giftRadius = giftBox.getSize(new THREE.Vector3()).length() / 2;
+  const giftScaleInside = 0.8 / giftRadius;
+  const giftScaleOut = (gift.finalSize ?? 1.15) / giftRadius;
   gift.root.scale.setScalar(giftScaleInside);
-  gift.root.position.set(0, 0.05, 0);
+  gift.root.position.set(0, 0, 0);
   gift.root.traverse((o) => (o.castShadow = true));
   body.add(gift.root);
 
@@ -869,8 +991,6 @@ export function start(slug) {
   }
   button.addEventListener('click', open);
 
-  if (reduce) settle();
-  else entrances[g.entrance]();
 
   function burst() {
     state.burst = true;
@@ -992,7 +1112,7 @@ export function start(slug) {
       body.rotation.set(knock.x * 0.08 + lean.y * 0.07, 0, knock.z * 0.08 - lean.x * 0.1);
       body.position.y = knock.hop * 0.06;
       if (state.mode === 'idle') cap.rotation.y += realDt * 0.12;
-      gift.root.position.set(knock.z * 0.04, 0.05 + knock.hop * 0.12, -knock.x * 0.04);
+      gift.root.position.set(knock.z * 0.04, knock.hop * 0.12, -knock.x * 0.04);
       gift.root.rotation.y += realDt * 0.3;
     } else {
       // slow motion while the gift hangs at its apex
@@ -1076,13 +1196,13 @@ export function start(slug) {
         giftPhys.vel.addScaledVector(tmpV, dt);
         giftPhys.pos.addScaledVector(giftPhys.vel, dt);
         giftPhys.scale = damp(giftPhys.scale, giftScaleOut, 4, dt);
-        const pose = g.object === 'coaster' ? { x: 0.12, z: 0 } : { x: 0.05, z: 0 };
+        const pose = g.object === 'carousel' ? { x: 0.16, z: 0 } : { x: 0.05, z: 0 };
         gift.root.rotation.x = damp(wrap(gift.root.rotation.x), pose.x + Math.sin(t * 0.9) * 0.04 + lean.y * 0.12, 3, dt);
         gift.root.rotation.z = damp(wrap(gift.root.rotation.z), pose.z + Math.sin(t * 0.7) * 0.03 - lean.x * 0.1, 3, dt);
         drag.v *= Math.exp(-2.2 * realDt);
         if (!drag.on) drag.yaw += drag.v;
-        // the coaster sways to keep its loop in view, the others turn slowly
-        const yaw = g.object === 'coaster' ? Math.sin(t * 0.4) * 0.45 : t * 0.35;
+        // the carousel turns by itself; the others turn slowly on the spot
+        const yaw = g.object === 'carousel' ? 0 : t * 0.35;
         const targetYaw = yaw + drag.yaw;
         gift.root.rotation.y = damp(targetYaw + wrap(gift.root.rotation.y - targetYaw), targetYaw, 2, dt);
         const hover = giftPhys.mode === 'home' ? Math.sin(t * 1.4) * 0.05 : 0;
@@ -1100,7 +1220,7 @@ export function start(slug) {
       }
       framing = damp(framing, giftPhys.mode === 'inside' ? 0 : 1, 2.2, realDt);
     }
-    gift.update(realDt, giftAccel);
+    gift.update(realDt * state.timeScale, giftAccel);
     giftAccel.multiplyScalar(0);
     fx.update(realDt * state.timeScale);
 
@@ -1121,6 +1241,30 @@ export function start(slug) {
     renderer.render(scene, camera);
   };
   requestAnimationFrame(tick);
+
+  // Prepare everything before anything is shown: compile every shader, wait for the
+  // font, render two frames so textures and the transmission pass exist; then the
+  // loading screen fades and the capsule makes its entrance.
+  progress(0.82);
+  (async () => {
+    try {
+      if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+      else renderer.compile(scene, camera);
+    } catch {
+      /* compiling lazily on first use is the fallback */
+    }
+    progress(0.92);
+    try {
+      await document.fonts.ready;
+    } catch {
+      /* the system font stands in */
+    }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    progress(1);
+    await hideLoader();
+    if (reduce) settle();
+    else entrances[g.entrance]();
+  })();
 
   // ?debug exposes the scene for automated checks
   if (new URLSearchParams(location.search).has('debug')) window.__juhulia = { state, cap, body, gift, giftPhys, lidPhys, camera };

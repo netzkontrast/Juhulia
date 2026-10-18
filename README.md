@@ -4,9 +4,9 @@ Drei Gacha-Kapseln mit QR-Code. Jeder Code führt zu einer eigenen Kapsel-Seite:
 
 | Seite | Farbe | Auftritt | Objekt | Link |
 |---|---|---|---|---|
-| [/zense](https://juhulia.vercel.app/zense) | Bernstein | fällt von oben, federt einmal schwer nach | Parfumflakon, sprüht ab und zu Glitzer | zenseofficial.de |
-| [/henne](https://juhulia.vercel.app/henne) | Rosa | rollt aus der Tiefe des Studios heran | Weinglas, schwenkt, der Wein schwappt | henne-weinbar.de |
-| [/phantasialand](https://juhulia.vercel.app/phantasialand) | Grün | wird im hohen Bogen hereinkatapultiert | Achterbahn, der Wagen fährt Looping | phantasialand.de |
+| [/zense](https://juhulia.vercel.app/zense) | Bernstein | fällt von oben, federt einmal schwer nach | Parfumflakon, der Duft schwappt, sprüht ab und zu Glitzer | zenseofficial.de |
+| [/henne](https://juhulia.vercel.app/henne) | Rosa | rollt aus der Tiefe des Studios heran | Weinglas, schwenkt, der Wein schwappt nach | henne-weinbar.de |
+| [/phantasialand](https://juhulia.vercel.app/phantasialand) | Grün | wird im hohen Bogen hereinkatapultiert | Karussell, dreht sich, die Pferde wippen | phantasialand.de |
 
 Vor dem Tipp klopft es von innen, man sieht das Objekt durch das farbige Plastik, das Licht wandert, die Kapsel wirft farbiges Licht auf den Boden, Glitzer funkelt, und sie neigt sich zum Finger. Beim Öffnen: Zittern, Aufplatzen, Glitzer wirbelt heraus, der Deckel fliegt weg, das Objekt schießt mit Drall heraus, hängt kurz in Zeitlupe und schwebt dann vorn. Danach lässt es sich mit dem Finger drehen; Antippen lässt es springen und funkeln. Es werden keine Geräte-Rechte (Bewegungssensoren) abgefragt.
 
@@ -21,7 +21,7 @@ Reines HTML, CSS und JavaScript, kein Build-Schritt. Vercel liefert `public/` au
 - `public/qr/<slug>.svg`: druckfertige QR-Codes für `https://juhulia.vercel.app/<slug>`
 - `public/vendor/`: Three.js 0.160.1 und GSAP 3.12.5; `public/fonts/`: Hanken Grotesk
 
-Falls die Szene nicht startet (kein WebGL, Skript lädt nicht), zeigt die Seite nach spätestens 8 Sekunden direkt den Link.
+Beim Laden zeigt ein Ring den echten Fortschritt (Download aller Dateien, dann Shader kompilieren, Schrift, zwei Aufwärm-Bilder). Erst wenn alles bereit ist, blendet er aus und die Kapsel tritt auf. Falls die Szene nicht startet (kein WebGL, Skript lädt nicht), zeigt die Seite nach spätestens 15 Sekunden direkt den Link.
 
 ## Befehle
 

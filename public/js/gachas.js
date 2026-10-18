@@ -35,7 +35,7 @@ export const GACHAS = {
     url: 'https://www.phantasialand.de/de/',
     host: 'phantasialand.de',
     entrance: 'launch', // catapulted in on a high arc from the side
-    object: 'coaster', // a roller coaster loop with a car that keeps riding it
+    object: 'carousel', // a carousel that turns, its horses rising and falling
     color: {
       capsule: '#22a35a', // green
       ground: '#10241a', // oklch(0.24 0.04 155)
