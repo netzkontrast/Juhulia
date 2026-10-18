@@ -1,26 +1,17 @@
 {
   "name": "juhulia",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "type": "module",
+  "description": "Static site: gothic gacha capsules with QR codes. No build step; public/ is served as-is.",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "next": "15.5.28",
-    "qrcode": "1.5.4",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
-    "three": "0.160.1"
+    "qr": "node scripts/qr.mjs",
+    "vendor": "cp node_modules/three/build/three.module.min.js node_modules/gsap/dist/gsap.min.js public/vendor/",
+    "serve": "npx --yes serve@14.2.4 public -l 3123"
   },
   "devDependencies": {
-    "@types/node": "22.15.30",
-    "@types/qrcode": "1.5.5",
-    "@types/react": "19.1.10",
-    "@types/react-dom": "19.1.7",
-    "@types/three": "0.160.0",
-    "typescript": "5.8.3"
+    "gsap": "3.12.5",
+    "qrcode": "1.5.4",
+    "three": "0.160.1"
   }
 }

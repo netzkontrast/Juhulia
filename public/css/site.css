@@ -1,0 +1,121 @@
+@font-face { font-family: 'Unifraktur'; src: url('/fonts/unifraktur.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Fell'; src: url('/fonts/fell.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Fell'; src: url('/fonts/fell-italic.woff2') format('woff2'); font-style: italic; font-display: swap; }
+
+:root {
+  --night: #000;
+  --bone: #e8dcc8;
+  --ash: #9a8f80;
+  --wax: #c9bba4;
+  --blood: #7a0a06;
+  --line: #2b2522;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--night); color: var(--bone); }
+body { font-family: 'Fell', 'Iowan Old Style', Georgia, serif; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--blood); color: var(--bone); }
+a { color: inherit; }
+a:focus-visible, button:focus-visible { outline: 1px solid var(--ash); outline-offset: 6px; }
+
+/* ---------- capsule page ---------- */
+
+.stage { position: fixed; inset: 0; overflow: hidden; background: var(--night); }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.stage__open {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.stage__open:focus-visible { outline: 1px solid var(--ash); outline-offset: -24px; }
+.stage__open:disabled { cursor: default; }
+
+.stage__name {
+  position: absolute; left: 0; right: 0; top: max(40px, calc(env(safe-area-inset-top) + 24px));
+  margin: 0; text-align: center; pointer-events: none;
+  font-family: 'Unifraktur', serif; font-weight: 400; font-size: clamp(30px, 8vw, 44px);
+  color: var(--wax); letter-spacing: 0.01em;
+  opacity: 0; transition: opacity 2.4s cubic-bezier(0.16, 1, 0.3, 1) 0.6s;
+}
+
+.stage__hint {
+  position: absolute; left: 0; right: 0; bottom: max(64px, calc(env(safe-area-inset-bottom) + 40px));
+  margin: 0; text-align: center; pointer-events: none;
+  font-style: italic; font-size: 16px; letter-spacing: 0.04em; color: var(--ash);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity 1.6s cubic-bezier(0.16, 1, 0.3, 1), transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stage__hint.is-visible { opacity: 1; transform: none; }
+.stage__hint.is-visible ~ .stage__name, .stage__name.is-visible { opacity: 1; }
+
+.stage__lightning { position: absolute; inset: 0; background: #dfe6ff; opacity: 0; pointer-events: none; }
+.stage__flood { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1); }
+.stage__flood.is-on { opacity: 1; }
+
+.stage__end {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 0 32px; text-align: center;
+}
+.stage__end[hidden] { display: none; }
+.stage__end p { margin: 0; font-style: italic; font-size: 16px; opacity: 0.75; }
+.stage__end a { font-size: 19px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; overflow-wrap: anywhere; }
+
+/* ---------- index ---------- */
+
+.crypt { min-height: 100vh; max-width: 1200px; margin: 0 auto; padding: clamp(48px, 9vw, 112px) clamp(16px, 5vw, 64px) 96px; }
+.crypt__title {
+  margin: 0; text-align: center; font-family: 'Unifraktur', serif; font-weight: 400;
+  font-size: clamp(3.5rem, 13vw, 6rem); line-height: 1; color: var(--bone);
+}
+.crypt__lede { margin: 18px 0 0; text-align: center; font-style: italic; font-size: 18px; color: var(--ash); }
+.crypt__rule { display: block; width: min(420px, 70%); height: 1px; margin: clamp(40px, 7vw, 72px) auto; border: 0; background: linear-gradient(90deg, transparent, var(--line) 20%, var(--ash) 50%, var(--line) 80%, transparent); }
+
+.crypt__list {
+  list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: clamp(56px, 7vw, 72px) clamp(24px, 4vw, 48px);
+}
+.relic { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
+.relic__frame {
+  position: relative; display: block; width: 100%; max-width: 300px; padding: 14px;
+  border: 1px solid var(--line); border-radius: 150px 150px 0 0; padding-top: 72px;
+  transition: border-color 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.relic__frame::before {
+  content: ''; position: absolute; inset: 6px; border: 1px solid var(--line); border-radius: 144px 144px 0 0; pointer-events: none;
+}
+.relic__frame:hover { border-color: var(--ash); transform: translateY(-4px); }
+.relic__frame img { position: relative; display: block; width: 100%; height: auto; aspect-ratio: 1; }
+.relic__flame {
+  position: absolute; left: 50%; top: 22px; width: 10px; height: 22px; margin-left: -5px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: radial-gradient(ellipse at 50% 70%, #fff6e0 0%, #ffcf80 35%, rgba(255, 130, 40, 0.5) 65%, transparent 72%);
+  filter: blur(0.3px); transform-origin: 50% 90%; animation: flicker 2.6s infinite ease-in-out;
+}
+.relic__flame::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 80px; height: 80px; margin: -40px 0 0 -40px;
+  background: radial-gradient(circle, rgba(255, 170, 80, 0.16), transparent 65%); pointer-events: none;
+}
+.relic:nth-child(2) .relic__flame { animation-delay: -0.9s; animation-duration: 3.1s; }
+.relic:nth-child(3) .relic__flame { animation-delay: -1.7s; animation-duration: 2.3s; }
+@keyframes flicker {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); opacity: 1; }
+  20% { transform: scale(0.92, 1.08) rotate(-3deg); }
+  45% { transform: scale(1.05, 0.94) rotate(2deg); opacity: 0.9; }
+  70% { transform: scale(0.96, 1.05) rotate(-1deg); }
+}
+.relic__name { margin: 0; font-family: 'Unifraktur', serif; font-weight: 400; font-size: 34px; line-height: 1; }
+.relic__host { margin: 6px 0 0; font-style: italic; font-size: 15px; color: var(--ash); }
+.relic__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 28px; }
+.relic__actions a {
+  display: inline-flex; align-items: center; min-height: 44px; font-size: 16px;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; text-decoration-color: var(--ash);
+}
+.relic__actions a:hover { text-decoration-color: var(--bone); }
+.relic__url { margin: 0; font-size: 13px; color: var(--ash); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) {
+  .relic__flame { animation: none; }
+  .relic__frame, .stage__hint, .stage__name { transition: none; }
+}
