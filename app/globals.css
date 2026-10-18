@@ -1,0 +1,26 @@
+:root {
+  --ink: #000;
+  --paper: #f4efe6;
+  --muted: #8a857c;
+  --line: #2a2723;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+}
+
+::selection { background: var(--paper); color: var(--ink); }
+
+a { color: inherit; }
+a:focus-visible, button:focus-visible { outline: 1px solid var(--muted); outline-offset: 6px; }
