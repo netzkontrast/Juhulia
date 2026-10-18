@@ -97,16 +97,16 @@ function starPoints(n, map) {
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uMap: { value: map }, uTime: { value: 0 }, uScale: { value: 300 }, uBoost: { value: 0 }, uTwinkle: { value: 1 } },
+    uniforms: { uMap: { value: map }, uTime: { value: 0 }, uScale: { value: 300 }, uBoost: { value: 0 }, uTwinkle: { value: 1 }, uGain: { value: 1 } },
     vertexShader: `
       attribute vec3 aColor; attribute float aSize; attribute float aAlpha; attribute float aPhase;
-      uniform float uTime; uniform float uScale; uniform float uBoost; uniform float uTwinkle;
+      uniform float uTime; uniform float uScale; uniform float uBoost; uniform float uTwinkle; uniform float uGain;
       varying vec3 vColor; varying float vAlpha; varying float vRot;
       void main() {
         float tw = pow(0.5 + 0.5 * sin(uTime * (1.2 + fract(aPhase * 7.3) * 2.6) + aPhase * 6.2831), 5.0);
         float k = mix(1.0, 0.25 + 1.4 * tw, uTwinkle);
         vColor = aColor;
-        vAlpha = aAlpha * k * (1.0 + uBoost * 1.5);
+        vAlpha = aAlpha * k * (uGain + uBoost * 1.5);
         vRot = aPhase * 3.0 + uTime * 0.3;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = min(aSize * (0.7 + 0.6 * k + uBoost) * uScale / max(-mv.z, 0.5), 110.0);
@@ -577,7 +577,11 @@ export function start(slug) {
 
   const showLink = () => {
     reveal.hidden = false;
-    requestAnimationFrame(() => reveal.classList.add('is-visible'));
+    requestAnimationFrame(() => {
+      reveal.classList.add('is-visible');
+      // the open button is gone; keep keyboard and screen reader users on the next step
+      reveal.querySelector('a')?.focus({ preventScroll: true });
+    });
   };
   const progress = (p) => window.__juhuliaProgress?.(p);
   // the loading screen leaves only once everything below is ready
@@ -935,6 +939,49 @@ export function start(slug) {
   const camTarget = new THREE.Vector3();
   const shake = new THREE.Vector3();
 
+  // half the width the camera sees at the capsule's depth
+  const visibleHalfWidth = () => {
+    const d = Math.max(1, camera.position.z);
+    return d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+  };
+
+  // Quality steps down on its own when frames get slow: resolution first, then
+  // shadow detail, then the amount of glitter. It never steps back up mid-visit.
+  const quality = {
+    tier: 0,
+    frames: 0,
+    sum: 0,
+    cooldown: 2,
+    sample(dt) {
+      if (!dt) return;
+      this.cooldown -= dt;
+      this.frames++;
+      this.sum += dt;
+      if (this.frames < 60) return;
+      const fps = this.frames / this.sum;
+      this.frames = 0;
+      this.sum = 0;
+      if (fps >= 45 || this.cooldown > 0 || this.tier >= 3) return;
+      this.tier++;
+      this.cooldown = 2;
+      const dpr = window.devicePixelRatio || 1;
+      if (this.tier === 1) renderer.setPixelRatio(Math.min(dpr, 1.5));
+      if (this.tier === 2) {
+        renderer.setPixelRatio(Math.min(dpr, 1.15));
+        key.shadow.mapSize.set(512, 512);
+        key.shadow.map?.dispose();
+        key.shadow.map = null;
+        field.geometry.setDrawRange(0, Math.round(GF * 0.6));
+      }
+      if (this.tier === 3) {
+        renderer.setPixelRatio(1);
+        key.castShadow = false;
+        field.geometry.setDrawRange(0, Math.round(GF * 0.35));
+      }
+      fit();
+    },
+  };
+
   const fit = () => {
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
@@ -1119,7 +1166,7 @@ export function start(slug) {
     lid.quaternion.copy(q);
     lidPhys.pos.copy(p);
     const side = Math.random() < 0.5 ? -1 : 1;
-    lidPhys.vel.set(side * rand(1.6, 2.2), rand(5.2, 6), rand(-0.6, -1.4));
+    lidPhys.vel.set(side * rand(1.3, 1.7), rand(5.2, 6), rand(-2.6, -2));
     lidPhys.rot.setFromQuaternion(q);
     lidPhys.spin.set(rand(-7, -4), rand(-2, 2), side * rand(4, 7));
 
@@ -1236,6 +1283,8 @@ export function start(slug) {
     // glitter: twinkle, drift a little with the lean (parallax), flare on events
     field.material.uniforms.uTime.value = t;
     field.material.uniforms.uBoost.value = glitterBoost.v;
+    // quieter in the background; events still make it flare
+    field.material.uniforms.uGain.value = 0.62;
     field.position.x = -lean.x * 0.5;
     field.position.y = lean.y * 0.25;
     field.rotation.y = Math.sin(t * 0.05) * 0.04;
@@ -1290,6 +1339,11 @@ export function start(slug) {
         if (!lidPhys.rest) {
           lidPhys.vel.y -= GRAVITY * dt;
           lidPhys.pos.addScaledVector(lidPhys.vel, dt);
+          const edge = Math.max(1.4, visibleHalfWidth() - 1.05);
+          if (Math.abs(lidPhys.pos.x) > edge) {
+            lidPhys.pos.x = Math.sign(lidPhys.pos.x) * edge;
+            lidPhys.vel.x *= -0.3;
+          }
           lidPhys.rot.x += lidPhys.spin.x * dt;
           lidPhys.rot.y += lidPhys.spin.y * dt;
           lidPhys.rot.z += lidPhys.spin.z * dt;
@@ -1383,6 +1437,7 @@ export function start(slug) {
     contactMat.opacity = 0.75 * clamp(1 - cap.position.y / 2.5);
     placeCamera(realDt);
     renderer.render(scene, camera);
+    quality.sample(realDt);
   };
   requestAnimationFrame(tick);
 
