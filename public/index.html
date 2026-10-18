@@ -3,62 +3,56 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#101113">
 <meta name="robots" content="noindex">
 <title>Juhulia</title>
-<link rel="preload" href="/fonts/unifraktur.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/hanken.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/site.css">
 </head>
 <body>
-<main class="crypt">
-  <h1 class="crypt__title">Juhulia</h1>
-  <p class="crypt__lede">Drei Kapseln. Jeder Code öffnet eine.</p>
-  <hr class="crypt__rule">
-  <ul class="crypt__list">
-    <li class="relic">
-      <a class="relic__frame" href="/zense" aria-label="Kapsel zense öffnen">
-        <span class="relic__flame" aria-hidden="true"></span>
-        <img src="/qr/zense.svg" width="272" height="272" alt="QR-Code zur Kapsel zense">
+<main class="index">
+  <h1 class="index__title">Juhulia</h1>
+  <p class="index__lede">Drei Kapseln. Jeder Code öffnet eine.</p>
+  <ul class="index__list">
+    <li class="code">
+      <a class="code__qr" href="/zense" tabindex="-1" aria-hidden="true">
+        <img src="/qr/zense.svg" width="272" height="272" alt="">
       </a>
-      <div>
-        <h2 class="relic__name">zense</h2>
-        <p class="relic__host">zenseofficial.de</p>
+      <div class="code__meta">
+        <h2 class="code__name">zense</h2>
+        <p class="code__host">zenseofficial.de</p>
       </div>
-      <div class="relic__actions">
+      <div class="code__actions">
         <a href="/zense">Kapsel öffnen</a>
-        <a href="/qr/zense.svg" download="juhulia-zense.svg">QR herunterladen</a>
+        <a href="/qr/zense.svg" download="juhulia-zense.svg">QR-Code laden</a>
       </div>
-      <p class="relic__url">juhulia.vercel.app/zense</p>
     </li>
-    <li class="relic">
-      <a class="relic__frame" href="/henne" aria-label="Kapsel Henne. öffnen">
-        <span class="relic__flame" aria-hidden="true"></span>
-        <img src="/qr/henne.svg" width="272" height="272" alt="QR-Code zur Kapsel Henne.">
+    <li class="code">
+      <a class="code__qr" href="/henne" tabindex="-1" aria-hidden="true">
+        <img src="/qr/henne.svg" width="272" height="272" alt="">
       </a>
-      <div>
-        <h2 class="relic__name">Henne.</h2>
-        <p class="relic__host">henne-weinbar.de</p>
+      <div class="code__meta">
+        <h2 class="code__name">Henne.</h2>
+        <p class="code__host">henne-weinbar.de</p>
       </div>
-      <div class="relic__actions">
+      <div class="code__actions">
         <a href="/henne">Kapsel öffnen</a>
-        <a href="/qr/henne.svg" download="juhulia-henne.svg">QR herunterladen</a>
+        <a href="/qr/henne.svg" download="juhulia-henne.svg">QR-Code laden</a>
       </div>
-      <p class="relic__url">juhulia.vercel.app/henne</p>
     </li>
-    <li class="relic">
-      <a class="relic__frame" href="/phantasialand" aria-label="Kapsel Phantasialand öffnen">
-        <span class="relic__flame" aria-hidden="true"></span>
-        <img src="/qr/phantasialand.svg" width="272" height="272" alt="QR-Code zur Kapsel Phantasialand">
+    <li class="code">
+      <a class="code__qr" href="/phantasialand" tabindex="-1" aria-hidden="true">
+        <img src="/qr/phantasialand.svg" width="272" height="272" alt="">
       </a>
-      <div>
-        <h2 class="relic__name">Phantasialand</h2>
-        <p class="relic__host">phantasialand.de</p>
+      <div class="code__meta">
+        <h2 class="code__name">Phantasialand</h2>
+        <p class="code__host">phantasialand.de</p>
       </div>
-      <div class="relic__actions">
+      <div class="code__actions">
         <a href="/phantasialand">Kapsel öffnen</a>
-        <a href="/qr/phantasialand.svg" download="juhulia-phantasialand.svg">QR herunterladen</a>
+        <a href="/qr/phantasialand.svg" download="juhulia-phantasialand.svg">QR-Code laden</a>
       </div>
-      <p class="relic__url">juhulia.vercel.app/phantasialand</p>
     </li>
   </ul>
 </main>
