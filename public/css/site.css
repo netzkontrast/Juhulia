@@ -68,7 +68,7 @@ a { color: inherit; }
   background: linear-gradient(180deg, var(--page-deep, var(--ground)) 0%, var(--page-deep, var(--ground)) 55%, var(--page-floor, var(--ground)) 100%);
 }
 :root:is([data-state='static'], [data-state='fallback']) .stage__reveal {
-  display: flex; inset: 0; bottom: auto; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  display: flex; inset: 0; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
   opacity: 1; transform: none; transition: none;
 }
 :root:is([data-state='static'], [data-state='fallback']) .stage__name {

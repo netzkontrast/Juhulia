@@ -576,7 +576,6 @@ export async function start(slug) {
   const button = root.querySelector('[data-open]');
   const hint = root.querySelector('[data-hint]');
   const reveal = root.querySelector('[data-reveal]');
-  const announce = root.querySelector('[data-announce]');
   // reduced motion: a still pose and a short, quiet reveal; follows changes of the setting
   const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   let reduce = motionQuery.matches;
@@ -586,10 +585,9 @@ export async function start(slug) {
     if (shown || isFallback()) return;
     shown = true;
     reveal.hidden = false;
-    if (announce) announce.textContent = `Kapsel geöffnet: ${g.label}.`;
     requestAnimationFrame(() => {
       reveal.classList.add('is-visible');
-      // the open button is gone; keep keyboard and screen reader users on the next step
+      // the open button is gone; keep keyboard users on the next step
       const a = document.activeElement;
       if (!a || a === document.body || a === root) reveal.querySelector('a')?.focus({ preventScroll: true });
     });

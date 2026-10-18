@@ -163,7 +163,7 @@ each('losing the GPU context falls back to the link', async (slug) => {
   await close();
 });
 
-each('reduced motion: keyboard opens, a still reveal, focus and announcement on the link', async (slug) => {
+each('reduced motion: keyboard opens, a still reveal, focus on the link', async (slug) => {
   const { page, errors, close } = await open(slug, { motion: 'reduce', query: '?debug' });
   await page.waitForFunction(() => window.__juhulia?.state.mode === 'idle', null, { timeout: 120000 });
   await page.keyboard.press('Tab');
@@ -174,7 +174,6 @@ each('reduced motion: keyboard opens, a still reveal, focus and announcement on 
   assert.deepEqual(s, { mode: 'revealed', gift: 'home' });
   await assertLink(page, slug, { timeout: 10000 });
   await page.waitForFunction(() => document.activeElement?.matches('[data-reveal] a'), null, { timeout: 5000 });
-  assert.equal(await page.locator('[data-announce]').textContent(), `Kapsel geöffnet: ${GACHAS[slug].label}.`);
   // the gift stands still: same pose a moment later
   const pose = () => page.evaluate(() => __juhulia.gift.root.position.toArray().concat(__juhulia.gift.root.rotation.y).map((v) => v.toFixed(3)).join());
   const p1 = await pose();

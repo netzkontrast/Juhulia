@@ -18,7 +18,7 @@ Reines HTML, CSS und JavaScript, kein Build-Schritt. Vercel liefert `public/` au
 - `public/<slug>.html`: die Kapsel-Seiten
 - `public/js/boot.js`: Laden mit Fortschritt, Bereitschaft und Ersatzansicht (ohne 3D-Engine)
 - `public/js/gacha.js`: Studio, Kapsel, Objekte und Choreografie (Three.js + GSAP)
-- `public/js/gachas.js`: Link, Auftritt, Objekt, Objektname und Farben je Kapsel
+- `public/js/gachas.js`: Link, Auftritt, Objekt und Farben je Kapsel
 - `tests/pages.test.mjs`: Tests der Fehlerwege, der Tastatur und der ruhigen Variante
 - `public/qr/<slug>.svg`: druckfertige QR-Codes für `https://juhulia.vercel.app/<slug>`
 - `public/vendor/`: Three.js 0.160.1 und GSAP 3.12.5; `public/fonts/`: Hanken Grotesk
@@ -27,7 +27,7 @@ Beim Laden zeigt ein Ring den echten Fortschritt (Download aller Dateien, dann S
 
 Der Link ist immer erreichbar. `public/js/boot.js` lädt die Szene und wechselt bei jedem Fehler genau einmal in die Ersatzansicht: Name und „Hier geht’s hin“ auf der Farbe der Seite. Auslöser sind eine fehlende Datei, kein WebGL, ein Fehler beim Aufbau oder Rendern, ein verlorener GPU-Kontext oder 10 Sekunden ohne Download-Fortschritt (insgesamt höchstens 45 Sekunden). Ein verspäteter Szenenstart ändert danach nichts mehr. Ohne JavaScript zeigt die Seite dieselbe Ansicht. Fehlt `boot.js` selbst, greift ein kleiner Wächter in der Seite nach 15 Sekunden.
 
-Bei „Bewegung reduzieren“ steht die Kapsel still: kein Auftritt, kein Klopfen, kein wanderndes Licht. Ein Tipp (oder Enter/Leertaste) öffnet sie ohne Flug, Wackeln und Feuerwerk, das Objekt steht ruhig, der Link erscheint sofort. Ändert sich die Einstellung, während die Seite offen ist, gilt sie ab sofort. Beim Öffnen meldet die Seite das Objekt für Screenreader („Kapsel geöffnet: Parfumflakon.“), und der Fokus geht auf den Link.
+Bei „Bewegung reduzieren“ steht die Kapsel still: kein Auftritt, kein Klopfen, kein wanderndes Licht. Ein Tipp (oder Enter/Leertaste) öffnet sie ohne Flug, Wackeln und Feuerwerk, das Objekt steht ruhig, der Link erscheint sofort. Ändert sich die Einstellung, während die Seite offen ist, gilt sie ab sofort. Beim Öffnen per Tastatur geht der Fokus auf den Link.
 
 ## Befehle
 

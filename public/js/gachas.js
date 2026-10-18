@@ -10,7 +10,6 @@ export const GACHAS = {
     host: 'zenseofficial.de',
     entrance: 'drop', // falls from above, one heavy rebound
     object: 'flacon', // a perfume flacon that sprays now and then
-    label: 'Parfumflakon', // read out when the capsule opens
     color: {
       capsule: '#f2a516', // amber
       ground: '#2a1d0e', // oklch(0.24 0.04 70)
@@ -24,7 +23,6 @@ export const GACHAS = {
     host: 'henne-weinbar.de',
     entrance: 'roll', // rolls in out of the depth of the studio
     object: 'wineglass', // a glass of red wine that swirls and sloshes
-    label: 'Weinglas', // read out when the capsule opens
     color: {
       capsule: '#f08ca0', // pink
       ground: '#2b151c', // oklch(0.24 0.04 0)
@@ -38,7 +36,6 @@ export const GACHAS = {
     host: 'phantasialand.de',
     entrance: 'launch', // catapulted in on a high arc from the side
     object: 'carousel', // a carousel that turns, its horses rising and falling
-    label: 'Karussell', // read out when the capsule opens
     color: {
       capsule: '#22a35a', // green
       ground: '#10241a', // oklch(0.24 0.04 155)
