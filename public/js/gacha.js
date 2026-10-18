@@ -586,10 +586,9 @@ export function start(slug) {
       const el = document.querySelector('[data-loader]');
       if (!el) return resolve();
       el.classList.add('is-done');
-      setTimeout(() => {
-        el.remove();
-        resolve();
-      }, reduce ? 0 : 480);
+      setTimeout(() => el.remove(), reduce ? 0 : 900);
+      // the entrance starts while the loading screen is still fading
+      setTimeout(resolve, reduce ? 0 : 150);
     });
 
   let renderer;
@@ -1011,7 +1010,7 @@ export function start(slug) {
       cap.position.set(0, 9, 0);
       cap.rotation.set(0.1, -1.2, 0);
       return gsap
-        .timeline({ onComplete: settle, delay: 0.35 })
+        .timeline({ onComplete: settle, paused: true })
         .to(cap.position, { y: 0, duration: 0.8, ease: 'power2.in' })
         .add(() => landing(1))
         .to(cap.position, { y: 0.42, duration: 0.24, ease: 'power2.out' })
@@ -1025,7 +1024,7 @@ export function start(slug) {
       cap.position.set(0, 0, Z);
       cap.rotation.set(Z, 0.3, 0); // a rolling sphere turns by distance / radius
       return gsap
-        .timeline({ onComplete: settle, delay: 0.3 })
+        .timeline({ onComplete: settle, paused: true })
         .to(cap.position, { z: 0, duration: 2.6, ease: 'power3.out' })
         .to(cap.rotation, { x: 0, duration: 2.6, ease: 'power3.out' }, 0)
         .to(cap.rotation, { x: 0.12, duration: 0.35, ease: 'sine.out' }, 2.45)
@@ -1038,7 +1037,7 @@ export function start(slug) {
       const peak = 4.2;
       cap.position.copy(from);
       return gsap
-        .timeline({ onComplete: settle, delay: 0.3 })
+        .timeline({ onComplete: settle, paused: true })
         .to(p, {
           t: 1,
           duration: 1.15,
@@ -1404,11 +1403,18 @@ export function start(slug) {
     } catch {
       /* the system font stands in */
     }
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+    // warm up with the capsule in view, so the plastic's refraction pass exists ...
+    await frame();
+    await frame();
+    // ... then, still behind the loading screen, move it to where its entrance begins,
+    // so it is never seen at rest before it arrives
+    const intro = reduce ? null : entrances[g.entrance]();
+    await frame();
     progress(1);
     await hideLoader();
-    if (reduce) settle();
-    else entrances[g.entrance]();
+    if (intro) intro.play();
+    else settle();
   })();
 
   // ?debug exposes the scene for automated checks

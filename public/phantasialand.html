@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/css/site.css">
 <script type="importmap">{ "imports": { "three": "/vendor/three.module.min.js" } }</script>
 </head>
-<body style="--page-accent:#22a35a;--page-deep:#08140d;--page-muted:#8fc6a3;--page-btn:#cdeed9;--page-ink:#0b2416">
+<body style="--page-floor:#10241a;--page-glitter:#b8f5cf;--page-accent:#22a35a;--page-deep:#08140d;--page-muted:#8fc6a3;--page-btn:#cdeed9;--page-ink:#0b2416">
 <main class="stage" data-stage>
   <h1 class="visually-hidden">Kapsel</h1>
   <canvas aria-hidden="true"></canvas>
@@ -23,7 +23,11 @@
     </a>
   </div>
   <div class="loader" data-loader role="progressbar" aria-label="Kapsel lädt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-    <svg viewBox="0 0 48 48" aria-hidden="true"><circle class="loader__track" cx="24" cy="24" r="20"/><circle class="loader__bar" cx="24" cy="24" r="20" pathLength="100"/></svg>
+    <div class="loader__floor" aria-hidden="true"></div>
+    <div class="loader__center">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><circle class="loader__track" cx="24" cy="24" r="20"/><circle class="loader__bar" cx="24" cy="24" r="20" pathLength="100"/></svg>
+      <p class="loader__note" data-loader-note>Lädt …</p>
+    </div>
   </div>
 </main>
 <script type="module">
@@ -31,6 +35,18 @@
   const SLUG = 'phantasialand';
   const loader = document.querySelector('[data-loader]');
   const bar = loader.querySelector('.loader__bar');
+  // glitter on the loading screen, like the studio's
+  const sky = document.createDocumentFragment();
+  for (let i = 0; i < 70; i++) {
+    const star = document.createElement('span');
+    star.className = 'loader__star';
+    star.setAttribute('aria-hidden', 'true');
+    const big = Math.random() < 0.15;
+    star.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 72}%;--d:${(2 + Math.random() * 3).toFixed(2)}s;--delay:${(-Math.random() * 4).toFixed(2)}s;--o:${(0.4 + Math.random() * 0.6).toFixed(2)};${big ? 'width:4px;height:4px;' : ''}`;
+    sky.appendChild(star);
+  }
+  loader.prepend(sky);
+  setTimeout(() => loader.querySelector('[data-loader-note]')?.classList.add('is-visible'), 3000);
   window.__juhuliaProgress = (p) => {
     const v = Math.round(Math.max(0, Math.min(1, p)) * 100);
     bar.style.strokeDashoffset = 100 - v;

@@ -78,20 +78,38 @@ a { color: inherit; }
 .link:active { transform: scale(0.98); }
 .link svg { flex: none; }
 
-/* ---------- loading ---------- */
+/* ---------- loading: the studio's ground and glitter, with a progress ring ---------- */
 
 .loader {
-  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center;
-  background: var(--page-deep, var(--ground));
-  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; overflow: hidden;
+  background: linear-gradient(180deg, var(--page-deep, var(--ground)) 0%, var(--page-deep, var(--ground)) 55%, var(--page-floor, var(--ground)) 100%);
+  transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .loader.is-done { opacity: 0; pointer-events: none; }
+.loader__floor {
+  position: absolute; left: 50%; top: 66%; width: 120vw; height: 34vh; transform: translateX(-50%);
+  border-radius: 50%; background: var(--page-accent, var(--text)); opacity: 0.1; filter: blur(48px);
+}
+.loader__star {
+  position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--page-glitter, #fff);
+  box-shadow: 0 0 6px 1px var(--page-glitter, #fff); opacity: 0;
+  animation: twinkle var(--d, 3s) ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(0.6); } 50% { opacity: var(--o, 0.9); transform: scale(1); } }
+.loader__center { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .loader svg { width: 44px; height: 44px; transform: rotate(-90deg); overflow: visible; }
-.loader__track { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 2.5; }
+.loader__track { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 2.5; }
 .loader__bar {
   fill: none; stroke: var(--page-accent, var(--text)); stroke-width: 2.5; stroke-linecap: round;
   stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.loader__note {
+  position: absolute; top: calc(100% + 14px); margin: 0; white-space: nowrap;
+  font-size: 13px; letter-spacing: 0.02em; color: var(--page-muted, var(--muted));
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.loader__note.is-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .loader__star { animation: none; opacity: 0.5; } }
 
 /* ---------- index ---------- */
 
