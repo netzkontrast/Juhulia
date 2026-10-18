@@ -30,7 +30,7 @@ a { color: inherit; }
 
 /* ---------- capsule page ---------- */
 
-.stage { position: fixed; inset: 0; overflow: hidden; background: var(--ground); }
+.stage { position: fixed; inset: 0; overflow: hidden; background: var(--page-deep, var(--ground)); }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
 .stage__open {
@@ -43,7 +43,7 @@ a { color: inherit; }
 .stage__hint {
   position: absolute; left: 0; right: 0; bottom: max(56px, calc(env(safe-area-inset-bottom) + 32px));
   margin: 0; text-align: center; pointer-events: none;
-  font-size: 14px; letter-spacing: 0.02em; color: var(--muted);
+  font-size: 14px; letter-spacing: 0.02em; color: var(--page-muted, var(--muted));
   opacity: 0; transform: translateY(8px);
   transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -61,12 +61,20 @@ a { color: inherit; }
 .link {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   min-height: 52px; max-width: 100%; padding: 0 26px; border-radius: 999px;
-  background: var(--paper); color: var(--ink); text-decoration: none;
+  position: relative; overflow: hidden; isolation: isolate;
+  background: var(--page-btn, var(--paper)); color: var(--page-ink, var(--ink)); text-decoration: none;
   font-size: 17px; font-weight: 500; letter-spacing: -0.01em; overflow-wrap: anywhere;
   box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.35s ease;
 }
-.link:hover { background: #ffffff; transform: translateY(-1px); }
+.link:hover { transform: translateY(-1px); filter: brightness(1.04); }
+/* a sheen passes over the button now and then */
+.link::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  transform: translateX(-120%); animation: sheen 4.5s cubic-bezier(0.4, 0, 0.2, 1) 1.2s infinite;
+}
+@keyframes sheen { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 .link:active { transform: scale(0.98); }
 .link svg { flex: none; }
 
@@ -99,4 +107,5 @@ a { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .stage__hint, .stage__reveal, .code__qr, .link { transition: none; }
+  .link::after { animation: none; }
 }
