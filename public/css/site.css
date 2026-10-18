@@ -43,7 +43,7 @@ a { color: inherit; }
 .stage__hint {
   position: absolute; left: 0; right: 0; bottom: max(56px, calc(env(safe-area-inset-bottom) + 32px));
   margin: 0; text-align: center; pointer-events: none;
-  font-size: 14px; letter-spacing: 0.02em; color: var(--page-muted, var(--muted));
+  font-size: 16px; letter-spacing: 0.01em; color: var(--page-muted, var(--muted));
   opacity: 0; transform: translateY(8px);
   transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -57,6 +57,24 @@ a { color: inherit; }
 }
 .stage__reveal[hidden] { display: none; }
 .stage__reveal.is-visible { opacity: 1; transform: none; }
+.stage:focus { outline: none; }
+/* the gift's name is read out with the link; it is only shown when there is no scene */
+.stage__name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+
+/* Without JavaScript (static) or when the scene cannot run (fallback): the link alone,
+   under the gift's name, on the page's own colour. Nothing covers it. */
+:root:is([data-state='static'], [data-state='fallback']) :is(.loader, .stage__open, .stage__hint, .stage canvas) { display: none; }
+:root:is([data-state='static'], [data-state='fallback']) .stage {
+  background: linear-gradient(180deg, var(--page-deep, var(--ground)) 0%, var(--page-deep, var(--ground)) 55%, var(--page-floor, var(--ground)) 100%);
+}
+:root:is([data-state='static'], [data-state='fallback']) .stage__reveal {
+  display: flex; inset: 0; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  opacity: 1; transform: none; transition: none;
+}
+:root:is([data-state='static'], [data-state='fallback']) .stage__name {
+  position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; text-align: center;
+  font-size: clamp(2rem, 9vw, 3.5rem); font-weight: 300; letter-spacing: -0.035em; line-height: 1; color: var(--page-accent, var(--text));
+}
 
 .link {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
@@ -78,26 +96,45 @@ a { color: inherit; }
 .link:active { transform: scale(0.98); }
 .link svg { flex: none; }
 
-/* ---------- loading ---------- */
+/* ---------- loading: the studio's ground and glitter, with a progress ring ---------- */
 
 .loader {
-  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center;
-  background: var(--page-deep, var(--ground));
-  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; overflow: hidden;
+  background: linear-gradient(180deg, var(--page-deep, var(--ground)) 0%, var(--page-deep, var(--ground)) 55%, var(--page-floor, var(--ground)) 100%);
+  transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .loader.is-done { opacity: 0; pointer-events: none; }
+.loader__floor {
+  position: absolute; left: 50%; top: 66%; width: 120vw; height: 34vh; transform: translateX(-50%);
+  border-radius: 50%; background: var(--page-accent, var(--text)); opacity: 0.1; filter: blur(48px);
+}
+.loader__star {
+  position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--page-glitter, #fff);
+  opacity: 0;
+  animation: twinkle var(--d, 3s) ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(0.6); } 50% { opacity: var(--o, 0.9); transform: scale(1); } }
+.loader__center { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .loader svg { width: 44px; height: 44px; transform: rotate(-90deg); overflow: visible; }
-.loader__track { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 2.5; }
+.loader__track { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 2.5; }
 .loader__bar {
   fill: none; stroke: var(--page-accent, var(--text)); stroke-width: 2.5; stroke-linecap: round;
   stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.loader__note {
+  position: absolute; top: calc(100% + 14px); margin: 0; white-space: nowrap;
+  font-size: 13px; letter-spacing: 0.02em; color: var(--page-muted, var(--muted));
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.loader__note.is-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .loader__star { animation: none; opacity: 0.5; } }
 
 /* ---------- index ---------- */
 
 .index { min-height: 100vh; max-width: 1180px; margin: 0 auto; padding: clamp(48px, 9vw, 112px) clamp(16px, 5vw, 64px) 96px; }
 .index__title { margin: 0; font-size: clamp(2.5rem, 7vw, 4.25rem); font-weight: 300; letter-spacing: -0.035em; line-height: 1; }
 .index__lede { margin: 16px 0 0; max-width: 34ch; font-size: 17px; line-height: 1.5; color: var(--muted); }
+.index__lede a { white-space: nowrap; text-underline-offset: 4px; }
 
 .index__list {
   list-style: none; margin: clamp(48px, 8vw, 96px) 0 0; padding: 0; display: grid;

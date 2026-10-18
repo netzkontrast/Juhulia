@@ -5,6 +5,7 @@
 // viewer, where it keeps living. Then its link appears.
 import * as THREE from 'three';
 import { GACHAS } from './gachas.js';
+import { ready, isFallback, onFallback, fallback } from './boot.js';
 
 const gsap = window.gsap;
 
@@ -97,16 +98,16 @@ function starPoints(n, map) {
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uMap: { value: map }, uTime: { value: 0 }, uScale: { value: 300 }, uBoost: { value: 0 }, uTwinkle: { value: 1 } },
+    uniforms: { uMap: { value: map }, uTime: { value: 0 }, uScale: { value: 300 }, uBoost: { value: 0 }, uTwinkle: { value: 1 }, uGain: { value: 1 } },
     vertexShader: `
       attribute vec3 aColor; attribute float aSize; attribute float aAlpha; attribute float aPhase;
-      uniform float uTime; uniform float uScale; uniform float uBoost; uniform float uTwinkle;
+      uniform float uTime; uniform float uScale; uniform float uBoost; uniform float uTwinkle; uniform float uGain;
       varying vec3 vColor; varying float vAlpha; varying float vRot;
       void main() {
         float tw = pow(0.5 + 0.5 * sin(uTime * (1.2 + fract(aPhase * 7.3) * 2.6) + aPhase * 6.2831), 5.0);
         float k = mix(1.0, 0.25 + 1.4 * tw, uTwinkle);
         vColor = aColor;
-        vAlpha = aAlpha * k * (1.0 + uBoost * 1.5);
+        vAlpha = aAlpha * k * (uGain + uBoost * 1.5);
         vRot = aPhase * 3.0 + uTime * 0.3;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = min(aSize * (0.7 + 0.6 * k + uBoost) * uScale / max(-mv.z, 0.5), 110.0);
@@ -516,6 +517,7 @@ function makeCarousel(accent) {
     root,
     finalSize: 1.25,
     update(dt) {
+      if (this.calm) return;
       this.t = (this.t || 0) + dt;
       const t = this.t;
       const speed = 1 + rush.v * 4;
@@ -560,8 +562,9 @@ const GIFTS = { flacon: makeFlacon, wineglass: makeWineGlass, carousel: makeCaro
 
 /* ---------- the page ---------- */
 
-export function start(slug) {
+export async function start(slug) {
   const g = GACHAS[slug];
+  if (!g || !gsap) throw new Error('capsule cannot start');
   const C = {
     capsule: new THREE.Color(g.color.capsule),
     ground: new THREE.Color(g.color.ground),
@@ -573,11 +576,21 @@ export function start(slug) {
   const button = root.querySelector('[data-open]');
   const hint = root.querySelector('[data-hint]');
   const reveal = root.querySelector('[data-reveal]');
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // reduced motion: a still pose and a short, quiet reveal; follows changes of the setting
+  const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let reduce = motionQuery.matches;
 
+  let shown = false;
   const showLink = () => {
+    if (shown || isFallback()) return;
+    shown = true;
     reveal.hidden = false;
-    requestAnimationFrame(() => reveal.classList.add('is-visible'));
+    requestAnimationFrame(() => {
+      reveal.classList.add('is-visible');
+      // the open button is gone; keep keyboard users on the next step
+      const a = document.activeElement;
+      if (!a || a === document.body || a === root) reveal.querySelector('a')?.focus({ preventScroll: true });
+    });
   };
   const progress = (p) => window.__juhuliaProgress?.(p);
   // the loading screen leaves only once everything below is ready
@@ -586,10 +599,9 @@ export function start(slug) {
       const el = document.querySelector('[data-loader]');
       if (!el) return resolve();
       el.classList.add('is-done');
-      setTimeout(() => {
-        el.remove();
-        resolve();
-      }, reduce ? 0 : 480);
+      setTimeout(() => el.remove(), reduce ? 0 : 900);
+      // the entrance starts while the loading screen is still fading
+      setTimeout(resolve, reduce ? 0 : 150);
     });
 
   let renderer;
@@ -597,13 +609,16 @@ export function start(slug) {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   } catch {
     // No WebGL: the link is all there is.
-    button.remove();
-    hint.remove();
-    window.__juhuliaReady = true;
-    hideLoader().then(showLink);
+    fallback('webgl');
     return;
   }
-  window.__juhuliaReady = true;
+  // a lost GPU context (memory pressure, driver reset) leaves a dead canvas: show the link
+  canvas.addEventListener('webglcontextlost', () => fallback('context-lost'));
+  let stopped = false;
+  onFallback(() => {
+    stopped = true;
+    gsap.globalTimeline.clear();
+  });
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(C.deep, 1);
@@ -936,6 +951,50 @@ export function start(slug) {
   const camTarget = new THREE.Vector3();
   const shake = new THREE.Vector3();
 
+  // half the width the camera sees at the capsule's depth
+  // half the visible width at depth z (the capsule stands at z = 0)
+  const visibleHalfWidth = (z = 0) => {
+    const d = Math.max(1, camera.position.z - z);
+    return d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+  };
+
+  // Quality steps down on its own when frames get slow: resolution first, then
+  // shadow detail, then the amount of glitter. It never steps back up mid-visit.
+  const quality = {
+    tier: 0,
+    frames: 0,
+    sum: 0,
+    cooldown: 2,
+    sample(dt) {
+      if (!dt) return;
+      this.cooldown -= dt;
+      this.frames++;
+      this.sum += dt;
+      if (this.frames < 60) return;
+      const fps = this.frames / this.sum;
+      this.frames = 0;
+      this.sum = 0;
+      if (fps >= 45 || this.cooldown > 0 || this.tier >= 3) return;
+      this.tier++;
+      this.cooldown = 2;
+      const dpr = window.devicePixelRatio || 1;
+      if (this.tier === 1) renderer.setPixelRatio(Math.min(dpr, 1.5));
+      if (this.tier === 2) {
+        renderer.setPixelRatio(Math.min(dpr, 1.15));
+        key.shadow.mapSize.set(512, 512);
+        key.shadow.map?.dispose();
+        key.shadow.map = null;
+        field.geometry.setDrawRange(0, Math.round(GF * 0.6));
+      }
+      if (this.tier === 3) {
+        renderer.setPixelRatio(1);
+        key.castShadow = false;
+        field.geometry.setDrawRange(0, Math.round(GF * 0.35));
+      }
+      fit();
+    },
+  };
+
   const fit = () => {
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
@@ -1000,6 +1059,7 @@ export function start(slug) {
     gsap.fromTo(cap.scale, { y: 1 - amt, x: 1 + amt * 0.6, z: 1 + amt * 0.6 }, { y: 1, x: 1, z: 1, duration: 0.5, ease: 'elastic.out(1, 0.4)' });
   };
   const landing = (strength) => {
+    if (reduce) return;
     squash(0.16 * strength);
     kick(0.12 * strength);
     fx.emit(new THREE.Vector3(cap.position.x, FLOOR + 0.05, cap.position.z), Math.round(30 * strength), { speed: 2.4, gravity: 0.6, life: 1.2, size: 0.09 });
@@ -1011,7 +1071,7 @@ export function start(slug) {
       cap.position.set(0, 9, 0);
       cap.rotation.set(0.1, -1.2, 0);
       return gsap
-        .timeline({ onComplete: settle, delay: 0.35 })
+        .timeline({ onComplete: settle, paused: true })
         .to(cap.position, { y: 0, duration: 0.8, ease: 'power2.in' })
         .add(() => landing(1))
         .to(cap.position, { y: 0.42, duration: 0.24, ease: 'power2.out' })
@@ -1025,7 +1085,7 @@ export function start(slug) {
       cap.position.set(0, 0, Z);
       cap.rotation.set(Z, 0.3, 0); // a rolling sphere turns by distance / radius
       return gsap
-        .timeline({ onComplete: settle, delay: 0.3 })
+        .timeline({ onComplete: settle, paused: true })
         .to(cap.position, { z: 0, duration: 2.6, ease: 'power3.out' })
         .to(cap.rotation, { x: 0, duration: 2.6, ease: 'power3.out' }, 0)
         .to(cap.rotation, { x: 0.12, duration: 0.35, ease: 'sine.out' }, 2.45)
@@ -1038,7 +1098,7 @@ export function start(slug) {
       const peak = 4.2;
       cap.position.copy(from);
       return gsap
-        .timeline({ onComplete: settle, delay: 0.3 })
+        .timeline({ onComplete: settle, paused: true })
         .to(p, {
           t: 1,
           duration: 1.15,
@@ -1064,6 +1124,7 @@ export function start(slug) {
   const scheduleKnock = () => {
     knockCall = gsap.delayedCall(rand(1.8, 4.2), () => {
       if (state.mode !== 'idle') return;
+      if (reduce) return scheduleKnock();
       const strong = Math.random() < 0.35;
       const a = rand(0, Math.PI * 2);
       const f = strong ? 2.2 : 1.1;
@@ -1084,6 +1145,7 @@ export function start(slug) {
   };
 
   function settle() {
+    if (stopped || state.mode !== 'entering') return;
     state.mode = 'idle';
     hint.classList.add('is-visible');
     scheduleKnock();
@@ -1097,17 +1159,20 @@ export function start(slug) {
       state.queued = true;
       return;
     }
-    if (state.mode !== 'idle') return;
+    if (state.mode !== 'idle' || stopped) return;
     state.mode = 'opening';
     state.sim = 0;
     hint.classList.remove('is-visible');
     knockCall?.kill();
+    // the focused button goes away; hold focus on the stage until the link takes it
+    if (document.activeElement === button) root.focus({ preventScroll: true });
     button.remove();
+    if (reduce) calmReveal();
   }
   button.addEventListener('click', open);
 
 
-  function burst() {
+  function burst({ calm = false } = {}) {
     state.burst = true;
     // the lid leaves the capsule, into world space
     lid.updateWorldMatrix(true, false);
@@ -1120,7 +1185,7 @@ export function start(slug) {
     lid.quaternion.copy(q);
     lidPhys.pos.copy(p);
     const side = Math.random() < 0.5 ? -1 : 1;
-    lidPhys.vel.set(side * rand(1.6, 2.2), rand(5.2, 6), rand(-0.6, -1.4));
+    lidPhys.vel.set(side * rand(1.3, 1.7), rand(5.2, 6), rand(-2.6, -2));
     lidPhys.rot.setFromQuaternion(q);
     lidPhys.spin.set(rand(-7, -4), rand(-2, 2), side * rand(4, 7));
 
@@ -1135,6 +1200,7 @@ export function start(slug) {
     giftPhys.vel.set(rand(-0.25, 0.25), 7.4, 0.9);
     giftPhys.spin.set(2.5, 7.5, 0.6);
     giftPhys.mode = 'flying';
+    if (calm) return;
 
     // glitter bursts out and swirls around the opening
     const at = new THREE.Vector3(cap.position.x, 0.1, cap.position.z);
@@ -1144,6 +1210,33 @@ export function start(slug) {
     gsap.fromTo(flash, { intensity: 5 }, { intensity: 0, duration: 0.9, ease: 'power2.out' });
     kick(0.16, 0.6);
     squash(0.12);
+  }
+
+  // Reduced motion: no flight, no shake, no glitter burst. In one quiet cut the lid
+  // lies beside the capsule and the gift stands at its place; the link follows at once.
+  function calmReveal() {
+    if (state.burst) {
+      // already in flight: land everything where it would come to rest
+      lidPhys.rest = true;
+      lidPhys.vel.set(0, 0, 0);
+      lidPhys.pos.y = FLOOR;
+      lidPhys.rot.set(nearest(lidPhys.rot.x, Math.PI * 2), lidPhys.rot.y, nearest(lidPhys.rot.z, Math.PI * 2));
+    } else {
+      burst({ calm: true });
+      lidPhys.pos.set(clamp(visibleHalfWidth(-1.9) - 1.05, 0.9, 1.7), FLOOR, -1.9);
+      lidPhys.vel.set(0, 0, 0);
+      lidPhys.rot.set(0, 0.6, 0);
+      lidPhys.rest = true;
+    }
+    giftPhys.pos.copy(giftHome);
+    giftPhys.vel.set(0, 0, 0);
+    gift.root.rotation.set(0, 0, 0);
+    giftPhys.mode = 'home';
+    giftPhys.scale = giftScaleOut;
+    state.timeScale = 1;
+    framing = 1;
+    state.mode = 'revealed';
+    showLink();
   }
 
   /* ---------- once revealed: drag to turn the gift, tap to make it spin and sparkle ---------- */
@@ -1173,6 +1266,7 @@ export function start(slug) {
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     if (!ray.intersectObject(gift.root, true).length) return;
+    if (reduce) return;
     // three quick taps on the gift wake its easter egg
     const nowT = performance.now();
     taps = taps.filter((x) => nowT - x < 1200);
@@ -1198,8 +1292,28 @@ export function start(slug) {
   const tmpV = new THREE.Vector3();
   const LID_GROUND = FLOOR + 0.5;
 
+  // the lid bounces off the edges of the view, measured at its own depth and with the
+  // camera where it ends up, so it also stays in frame once the camera moves in on the gift
+  const keepLidInView = () => {
+    const edge = Math.max(0.9, visibleHalfWidth(lidPhys.pos.z) * (framing > 0.5 ? 1 : 0.85) - 1.05);
+    if (Math.abs(lidPhys.pos.x) > edge) {
+      lidPhys.pos.x = Math.sign(lidPhys.pos.x) * edge;
+      lidPhys.vel.x *= -0.3;
+    }
+  };
+
   const tick = (now) => {
+    if (stopped) return;
     requestAnimationFrame(tick);
+    try {
+      frame(now);
+    } catch (err) {
+      // a scene that cannot render must not hide the link
+      console.error(err);
+      fallback('render');
+    }
+  };
+  const frame = (now) => {
     // rAF timestamps can be slightly older than the last performance.now(); never step backwards
     const realDt = clamp((now - last) / 1000, 0, 0.05);
     last = now;
@@ -1210,16 +1324,16 @@ export function start(slug) {
     {
       const out = giftPhys.mode === 'home';
       seekLock.hold -= realDt;
-      if (out && seekLock.hold <= 0) {
+      if (out && seekLock.hold <= 0 && !reduce) {
         seekLock.hold = rand(4, 7);
         gsap.to(seekLock, { v: 1, duration: 0.9, ease: 'power2.inOut', yoyo: true, repeat: 1, repeatDelay: rand(1.4, 2.4) });
       }
-      const sx = Math.sin(t * 0.47) * 2.6 + Math.sin(t * 1.13) * 0.6;
-      const sy = 0.4 + Math.sin(t * 0.71) * 0.6;
+      const sx = reduce ? 0.8 : Math.sin(t * 0.47) * 2.6 + Math.sin(t * 1.13) * 0.6;
+      const sy = reduce ? 0.6 : 0.4 + Math.sin(t * 0.71) * 0.6;
       seekAim.set(sx, sy, 0.3);
-      if (out) seekAim.lerp(gift.root.position, seekLock.v);
+      if (out) seekAim.lerp(gift.root.position, reduce ? 0.8 : seekLock.v);
       else seekAim.lerp(cap.position, 0.25);
-      seeker.target.position.lerp(seekAim, 1 - Math.exp(-4 * realDt));
+      seeker.target.position.lerp(seekAim, reduce ? 1 : 1 - Math.exp(-4 * realDt));
       const len = seeker.position.distanceTo(seeker.target.position) + 6;
       const r = Math.tan(seeker.angle) * len;
       beam.position.copy(seeker.position);
@@ -1227,20 +1341,25 @@ export function start(slug) {
       beam.scale.set(r, r, len);
       beamMat.uniforms.uOpacity.value = 0.12 + seekLock.v * 0.08;
     }
-    key.position.x = Math.sin(t * 0.22) * 3.2;
-    key.position.z = 3 + Math.cos(t * 0.17) * 1.2;
+    // wandering light, drifting glitter and the shimmer stand still under reduced motion
+    const mt = reduce ? 0 : t;
+    key.position.x = Math.sin(mt * 0.22) * 3.2;
+    key.position.z = 3 + Math.cos(mt * 0.17) * 1.2;
     pool.position.x = key.position.x * 0.15;
 
-    lean.x = damp(lean.x, lean.tx, 2.5, realDt);
-    lean.y = damp(lean.y, lean.ty, 2.5, realDt);
+    lean.x = damp(lean.x, reduce ? 0 : lean.tx, 2.5, realDt);
+    lean.y = damp(lean.y, reduce ? 0 : lean.ty, 2.5, realDt);
 
     // glitter: twinkle, drift a little with the lean (parallax), flare on events
-    field.material.uniforms.uTime.value = t;
+    field.material.uniforms.uTime.value = mt;
+    field.material.uniforms.uTwinkle.value = reduce ? 0 : 1;
     field.material.uniforms.uBoost.value = glitterBoost.v;
+    // quieter in the background; events still make it flare
+    field.material.uniforms.uGain.value = 0.62;
     field.position.x = -lean.x * 0.5;
     field.position.y = lean.y * 0.25;
-    field.rotation.y = Math.sin(t * 0.05) * 0.04;
-    sparks.material.uniforms.uTime.value = t;
+    field.rotation.y = Math.sin(mt * 0.05) * 0.04;
+    sparks.material.uniforms.uTime.value = mt;
 
     // knocks: a damped spring on the capsule's tilt, plus a small hop
     knock.vx += -knock.x * 140 * realDt;
@@ -1256,9 +1375,9 @@ export function start(slug) {
     if (state.mode === 'idle' || state.mode === 'entering') {
       body.rotation.set(knock.x * 0.08 + lean.y * 0.07, 0, knock.z * 0.08 - lean.x * 0.1);
       body.position.y = knock.hop * 0.06;
-      if (state.mode === 'idle') cap.rotation.y += realDt * 0.12;
+      if (state.mode === 'idle' && !reduce) cap.rotation.y += realDt * 0.12;
       gift.root.position.set(knock.z * 0.04, knock.hop * 0.12, -knock.x * 0.04);
-      gift.root.rotation.y += realDt * 0.3;
+      if (!reduce) gift.root.rotation.y += realDt * 0.3;
     } else {
       // slow motion while the gift hangs at its apex
       if (state.mode === 'opening') {
@@ -1291,6 +1410,7 @@ export function start(slug) {
         if (!lidPhys.rest) {
           lidPhys.vel.y -= GRAVITY * dt;
           lidPhys.pos.addScaledVector(lidPhys.vel, dt);
+          keepLidInView();
           lidPhys.rot.x += lidPhys.spin.x * dt;
           lidPhys.rot.y += lidPhys.spin.y * dt;
           lidPhys.rot.z += lidPhys.spin.z * dt;
@@ -1310,6 +1430,7 @@ export function start(slug) {
           lidPhys.pos.x += lidPhys.vel.x * dt;
           lidPhys.pos.z += lidPhys.vel.z * dt;
           lidPhys.vel.multiplyScalar(Math.exp(-4 * dt));
+          keepLidInView();
           lidPhys.pos.y = damp(lidPhys.pos.y, FLOOR, 6, dt);
           lidPhys.rot.x = damp(lidPhys.rot.x, nearest(lidPhys.rot.x, Math.PI * 2), 5, dt);
           lidPhys.rot.z = damp(lidPhys.rot.z, nearest(lidPhys.rot.z, Math.PI * 2), 5, dt);
@@ -1342,29 +1463,30 @@ export function start(slug) {
         giftPhys.pos.addScaledVector(giftPhys.vel, dt);
         giftPhys.scale = damp(giftPhys.scale, giftScaleOut, 4, dt);
         const pose = g.object === 'carousel' ? { x: 0.16, z: 0 } : { x: 0.05, z: 0 };
-        gift.root.rotation.x = damp(wrap(gift.root.rotation.x), pose.x + Math.sin(t * 0.9) * 0.04 + lean.y * 0.12, 3, dt);
-        gift.root.rotation.z = damp(wrap(gift.root.rotation.z), pose.z + Math.sin(t * 0.7) * 0.03 - lean.x * 0.1, 3, dt);
+        gift.root.rotation.x = damp(wrap(gift.root.rotation.x), pose.x + Math.sin(mt * 0.9) * 0.04 + lean.y * 0.12, 3, dt);
+        gift.root.rotation.z = damp(wrap(gift.root.rotation.z), pose.z + Math.sin(mt * 0.7) * 0.03 - lean.x * 0.1, 3, dt);
         drag.v *= Math.exp(-2.2 * realDt);
         if (!drag.on) drag.yaw += drag.v;
         // the carousel turns by itself; the others turn slowly on the spot
-        const yaw = g.object === 'carousel' ? 0 : t * 0.35;
+        const yaw = g.object === 'carousel' || reduce ? 0 : t * 0.35;
         const targetYaw = yaw + drag.yaw;
         gift.root.rotation.y = damp(targetYaw + wrap(gift.root.rotation.y - targetYaw), targetYaw, 2, dt);
-        const hover = giftPhys.mode === 'home' ? Math.sin(t * 1.4) * 0.05 : 0;
+        const hover = giftPhys.mode === 'home' && !reduce ? Math.sin(t * 1.4) * 0.05 : 0;
         gift.root.position.set(giftPhys.pos.x, giftPhys.pos.y + hover, giftPhys.pos.z);
         if (giftPhys.mode === 'settling' && giftPhys.pos.distanceTo(giftHome) < 0.25 && giftPhys.vel.length() < 0.6) {
           giftPhys.mode = 'home';
           state.mode = 'revealed';
           showLink();
         }
-        if (giftPhys.mode === 'home') gift.life(t, realDt, fx);
+        if (giftPhys.mode === 'home' && !reduce) gift.life(t, realDt, fx);
       }
       if (giftPhys.mode !== 'inside') {
         gift.root.scale.setScalar(giftPhys.scale);
         giftAccel.copy(giftPhys.vel).sub(lastGiftVel).divideScalar(Math.max(dt, 1e-4));
       }
-      framing = damp(framing, giftPhys.mode === 'inside' ? 0 : 1, 2.2, realDt);
+      framing = reduce ? (giftPhys.mode === 'inside' ? 0 : 1) : damp(framing, giftPhys.mode === 'inside' ? 0 : 1, 2.2, realDt);
     }
+    gift.calm = reduce;
     gift.update(realDt * state.timeScale, giftAccel);
     giftAccel.multiplyScalar(0);
     fx.update(realDt * state.timeScale);
@@ -1374,43 +1496,76 @@ export function start(slug) {
     glow.position.z = cap.position.z + 0.15;
     caustic.position.x = cap.position.x + 0.1;
     caustic.position.z = cap.position.z + 0.25;
-    caustic.rotation.z = t * 0.07;
-    caustic.scale.setScalar(1 + Math.sin(t * 0.8) * 0.04);
+    caustic.rotation.z = mt * 0.07;
+    caustic.scale.setScalar(1 + Math.sin(mt * 0.8) * 0.04);
     const lift = clamp(1 - cap.position.y / 3);
-    causticMat.opacity = (0.4 + Math.sin(t * 1.7) * 0.08 + Math.sin(t * 3.1) * 0.05) * lift * (state.burst ? 0.4 : 1);
+    causticMat.opacity = (0.4 + Math.sin(mt * 1.7) * 0.08 + Math.sin(mt * 3.1) * 0.05) * lift * (state.burst ? 0.4 : 1);
     glow.visible = cap.position.y > -0.5;
     contact.position.x = cap.position.x;
     contact.position.z = cap.position.z;
     contactMat.opacity = 0.75 * clamp(1 - cap.position.y / 2.5);
-    placeCamera(realDt);
+    placeCamera(realDt, reduce);
     renderer.render(scene, camera);
+    quality.sample(realDt);
   };
   requestAnimationFrame(tick);
+
+  // ?debug exposes the scene for automated checks
+  if (new URLSearchParams(location.search).has('debug')) window.__juhulia = { state, cap, body, gift, giftPhys, lidPhys, camera, renderer };
+
+  let intro = null;
+  // the setting can change while the page is open: finish whatever is moving, at once
+  const onMotion = () => {
+    reduce = motionQuery.matches;
+    if (!reduce || stopped) return;
+    shake.set(0, 0, 0);
+    cap.scale.set(1, 1, 1);
+    if (state.mode === 'entering' && intro) {
+      // jump to the end pose without its landing effects
+      intro.progress(1, true).kill();
+      intro = null;
+      settle();
+    } else if (state.mode === 'opening') {
+      calmReveal();
+    }
+  };
+  motionQuery.addEventListener?.('change', onMotion);
 
   // Prepare everything before anything is shown: compile every shader, wait for the
   // font, render two frames so textures and the transmission pass exist; then the
   // loading screen fades and the capsule makes its entrance.
   progress(0.82);
-  (async () => {
-    try {
-      if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
-      else renderer.compile(scene, camera);
-    } catch {
-      /* compiling lazily on first use is the fallback */
-    }
-    progress(0.92);
-    try {
-      await document.fonts.ready;
-    } catch {
-      /* the system font stands in */
-    }
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    progress(1);
-    await hideLoader();
-    if (reduce) settle();
-    else entrances[g.entrance]();
-  })();
-
-  // ?debug exposes the scene for automated checks
-  if (new URLSearchParams(location.search).has('debug')) window.__juhulia = { state, cap, body, gift, giftPhys, lidPhys, camera };
+  try {
+    if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+    else renderer.compile(scene, camera);
+  } catch {
+    /* compiling lazily on first use is the fallback */
+  }
+  if (stopped) return;
+  progress(0.92);
+  try {
+    await document.fonts.ready;
+  } catch {
+    /* the system font stands in */
+  }
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  // warm up with the capsule in view, so the plastic's refraction pass exists ...
+  await nextFrame();
+  await nextFrame();
+  if (stopped) return;
+  // ... then, still behind the loading screen, move it to where its entrance begins,
+  // so it is never seen at rest before it arrives
+  intro = reduce ? null : entrances[g.entrance]();
+  await nextFrame();
+  // too late (the page already fell back to its link) or the scene broke while warming up
+  if (stopped || !ready()) return;
+  progress(1);
+  await hideLoader();
+  if (stopped) return;
+  if (intro && !reduce) intro.play();
+  else {
+    intro?.progress(1, true).kill();
+    intro = null;
+    settle();
+  }
 }

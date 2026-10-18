@@ -3,15 +3,17 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Static site: gothic gacha capsules with QR codes. No build step; public/ is served as-is.",
+  "description": "Static site: gacha capsules with QR codes. No build step; public/ is served as-is.",
   "scripts": {
     "qr": "node scripts/qr.mjs",
     "vendor": "cp node_modules/three/build/three.module.min.js node_modules/gsap/dist/gsap.min.js public/vendor/",
-    "serve": "npx --yes serve@14.2.4 public -l 3123"
+    "serve": "npx --yes serve@14.2.4 public -l 3123",
+    "test": "node --test --test-concurrency=1 --test-timeout=600000 tests/pages.test.mjs"
   },
   "devDependencies": {
     "gsap": "3.12.5",
     "qrcode": "1.5.4",
-    "three": "0.160.1"
+    "three": "0.160.1",
+    "playwright-core": "1.48.2"
   }
 }
