@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Next.js, deployed on Vercel. The capsule animation is rendered with Three.js.
+Static HTML, CSS and JavaScript (no framework, no build step), deployed on Vercel at https://juhulia.vercel.app. Three.js renders the capsule, GSAP choreographs entrances and weather.
 
 ## Users
 
@@ -16,7 +16,7 @@ Guests at a birthday who open a physical gacha capsule and find a QR code inside
 
 ## Product Purpose
 
-Juhulia is the moment between scanning the QR code and arriving at the gift behind it. Each QR code opens the same page with its own identifier; the page shows a single gacha capsule on black. One tap opens the capsule in 3D, and the page then forwards to that code's external destination.
+Juhulia is the moment between scanning the QR code and arriving at the gift behind it. Each QR code opens its own capsule page; the page shows a single gacha capsule in a dark crypt. One tap opens the capsule in 3D, and the page then forwards to that code's external destination.
 
 Success: the scan feels like opening something of value, and every code reliably lands on its own destination.
 
@@ -27,26 +27,27 @@ The physical capsule is echoed by a digital one: the real object in the guest's 
 ## Operating Context
 
 - Entry is always a phone camera scan of a QR code found inside a physical gacha capsule.
-- Each QR code encodes the page URL plus an identifier (e.g. `?g=<slug>`); the page maps the identifier to an external URL.
+- Each QR code encodes its capsule page, `https://juhulia.vercel.app/<slug>`; that page forwards to its external URL.
 - The destination pages are external and not part of this product. No additional content is shown on Juhulia itself.
 
 ## Capabilities and Constraints
 
-- One screen: capsule on black, a tap to open, a light-led opening animation, then a redirect.
-- Mapping from identifier to external URL is configuration; the real slugs and URLs are not decided yet.
-- Undecided: behaviour for an unknown or missing identifier.
+- One screen per capsule: the capsule enters, the crypt stays alive while it waits, a tap opens it, light floods, then a redirect.
+- Pages and destinations: /zense → zenseofficial.de, /henne → henne-weinbar.de, /phantasialand → phantasialand.de. QR codes encode https://juhulia.vercel.app/<slug>.
+- Unknown paths show a short 404 page linking to the index.
 
 ## Brand Commitments
 
-- Black page. Only the capsule and light; no other illustration of the birthday.
+- Gothic ("Gruftie") world: black, candlelight, fog, gothic windows, blackletter. Pinned by the user.
 - Serious register: no comic or toy look, no jokes or playful copy.
+- The scene stays alive before the tap; each capsule page has its own entrance and opening.
 
 ## Evidence on Hand
 
-None. No slugs, destination URLs, photos or brand assets exist yet; do not invent them.
+Destination URLs above. No photos or brand assets of the destinations are used; do not invent them.
 
 ## Product Principles
 
 1. The capsule is the whole interface; nothing competes with it.
-2. Weight over whimsy: the opening is slow, deliberate and lit, not bouncy.
+2. Weight over whimsy: entrances may move with physical weight (a drop, an approach, a rise), the opening is slow, deliberate and lit.
 3. The redirect must never fail silently; each code lands on its destination.

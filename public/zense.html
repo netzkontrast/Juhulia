@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex">
+<title>zense · Juhulia</title>
+<link rel="preload" href="/fonts/unifraktur.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/css/site.css">
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.min.js" } }</script>
+<script src="/vendor/gsap.min.js" defer></script>
+</head>
+<body>
+<main class="stage" data-stage>
+  <canvas aria-hidden="true"></canvas>
+  <button type="button" class="stage__open" data-open aria-label="Kapsel öffnen"></button>
+  <p class="stage__hint" data-hint>Berühre die Kapsel</p>
+  <h1 class="stage__name">zense</h1>
+  <div class="stage__lightning" data-lightning aria-hidden="true"></div>
+  <div class="stage__flood" data-flood aria-hidden="true"></div>
+  <div class="stage__end" data-end role="status" hidden>
+    <p>Weiterleitung zu</p>
+    <a href="https://zenseofficial.de/">zenseofficial.de</a>
+  </div>
+  <noscript><p class="stage__hint is-visible"><a href="https://zenseofficial.de/">Weiter zu zenseofficial.de</a></p></noscript>
+</main>
+<script type="module">
+  import { start } from '/js/gacha.js';
+  const go = () => start('zense');
+  if (window.gsap) go(); else window.addEventListener('DOMContentLoaded', go, { once: true });
+</script>
+</body>
+</html>

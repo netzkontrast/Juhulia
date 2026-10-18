@@ -1,29 +1,31 @@
 # Juhulia
 
-Gacha-Kapseln mit QR-Code. Jeder Code öffnet eine eigene Seite mit einer 3D-Kapsel auf Schwarz. Ein Tipp öffnet sie, danach geht es weiter zum jeweiligen Ziel.
+Drei Gacha-Kapseln im Gruftie-Stil. Jeder QR-Code führt zu einer eigenen Kapsel-Seite: Die Kapsel erscheint in einer dunklen Krypta mit Kerzen, Bodennebel und gotischen Fenstern. Ein Tipp öffnet sie, danach geht es weiter zum Ziel.
 
-| Seite | Öffnung | Ziel |
-|---|---|---|
-| `/zense` | Deckel dreht sich ab, Duftnebel steigt auf | https://zenseofficial.de/ |
-| `/henne` | Deckel klappt nach hinten auf, Wein im Kerzenlicht | https://henne-weinbar.de/ |
-| `/phantasialand` | Kapsel steigt in kreisenden Lichtringen auf | https://www.phantasialand.de/de/ |
+| Seite | Auftritt | Öffnung | Ziel |
+|---|---|---|---|
+| [/zense](https://juhulia.vercel.app/zense) | fällt von oben und hüpft aus | Deckel dreht sich ab, Weihrauch steigt auf | https://zenseofficial.de/ |
+| [/henne](https://juhulia.vercel.app/henne) | gleitet aus der Ferne durch den Nebel heran, Kerzen entzünden sich | Deckel klappt wie ein Reliquiar auf, Wein im Kerzenlicht | https://henne-weinbar.de/ |
+| [/phantasialand](https://juhulia.vercel.app/phantasialand) | Blitz, dann steigt sie aus einem Lichtring im Boden | schwebt in kreisenden Ringen, Fledermäuse fliehen | https://www.phantasialand.de/de/ |
 
-- `/` zeigt alle drei QR-Codes mit Links zu den Kapsel-Seiten.
-- `/qr/<slug>` lädt den QR-Code als SVG herunter (für den Druck).
-- Ziele, Farben und Öffnungsart stehen in `lib/gachas.ts`.
+Solange niemand tippt, flackern die Kerzen, Asche treibt im Licht, Zugluft lässt die Flammen sich neigen, die Naht pulsiert wie ein Herzschlag. Bei Phantasialand blitzt es ab und zu und Fledermäuse ziehen vor dem Mond vorbei, bei zense steigt ein Faden Weihrauch auf.
 
-Die QR-Codes zeigen automatisch auf die Domain, unter der die Seite läuft. Für den Druck sollte eine feste Domain gesetzt sein: `NEXT_PUBLIC_SITE_URL=https://deine-domain.vercel.app` in den Vercel-Umgebungsvariablen. So ändern sich die gedruckten Codes nicht, wenn sich die Vorschau-URL ändert.
+## Aufbau
 
-## Entwickeln
+Reines HTML, CSS und JavaScript, kein Build-Schritt. Vercel liefert den Ordner `public/` aus (siehe `vercel.json`).
+
+- `public/index.html`: alle drei QR-Codes mit Links
+- `public/<slug>.html`: die Kapsel-Seiten
+- `public/js/gacha.js`: die 3D-Szene (Three.js) und die Choreografie (GSAP)
+- `public/js/gachas.js`: Ziele, Farben, Auftritt und Öffnung je Kapsel
+- `public/qr/<slug>.svg`: druckfertige QR-Codes für `https://juhulia.vercel.app/<slug>`
+- `public/vendor/`: Three.js 0.160.1 und GSAP 3.12.5, lokal mitgeliefert
+
+## Befehle
 
 ```bash
-npm install
-npm run dev
+npm install     # nur für die Werkzeuge unten
+npm run qr      # QR-Codes neu erzeugen (nach Änderungen an SITE oder den Slugs)
+npm run vendor  # Three.js und GSAP nach public/vendor kopieren
+npm run serve   # lokal ansehen auf http://localhost:3123
 ```
-
-## Auf Vercel veröffentlichen
-
-1. Auf vercel.com → **Add New… → Project** → das GitHub-Repo `netzkontrast/Juhulia` importieren.
-2. Framework wird als Next.js erkannt; keine weiteren Einstellungen nötig.
-3. Nach dem ersten Deploy die Produktions-Domain als `NEXT_PUBLIC_SITE_URL` eintragen und neu deployen.
-4. QR-Codes über `/` bzw. `/qr/<slug>` herunterladen und drucken.
